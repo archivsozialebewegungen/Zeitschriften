@@ -10,7 +10,7 @@ from injector import inject
 from asb.brosch.mixins import ViewModelMixin
 from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     BroschInitDialogWrapper, BroschFilterDialogWrapper,\
-    DeletionConfirmationDialogWrapper
+    DeletionConfirmationDialogWrapper, BroschFileChooserDialogWrapper
         
 class BroschPage(Gtk.Box, ViewModelMixin):
     
@@ -19,7 +19,8 @@ class BroschPage(Gtk.Box, ViewModelMixin):
                  group_selection_dialog: GroupSelectionDialogWrapper,
                  brosch_init_dialog: BroschInitDialogWrapper,
                  brosch_filter_dialog: BroschFilterDialogWrapper,
-                 deletion_confirmation_dialog: DeletionConfirmationDialogWrapper):
+                 deletion_confirmation_dialog: DeletionConfirmationDialogWrapper,
+                 file_selection_dialog: BroschFileChooserDialogWrapper):
 
         super().__init__()
         
@@ -29,6 +30,7 @@ class BroschPage(Gtk.Box, ViewModelMixin):
         self.brosch_init_dialog = brosch_init_dialog
         self.brosch_filter_dialog = brosch_filter_dialog
         self.deletion_confirmation_dialog = deletion_confirmation_dialog
+        self.file_selection_dialog = file_selection_dialog
         
         # Invisible properties
         self.id = None
@@ -194,6 +196,10 @@ class BroschPage(Gtk.Box, ViewModelMixin):
         self.group_button.connect('clicked', lambda button: self.presenter.change_group())
         button_box.pack_start(self.group_button, True, True, 0)
         
+        self.file_button = Gtk.Button.new_with_label("Datei ändern")
+        self.file_button.connect('clicked', lambda button: self.presenter.change_file())
+        button_box.pack_start(self.file_button, True, True, 0)
+
         self.presenter.set_viewmodel(self)
         
     def _set_edit_status(self, editable: bool):
@@ -245,6 +251,10 @@ class BroschPage(Gtk.Box, ViewModelMixin):
     def _get_confirm_deletion(self):
         
         return self.deletion_confirmation_dialog.run()
+            
+    def _get_file(self):
+        
+        return self.file_selection_dialog.run()
             
     def _set_mode(self, mode): 
         
@@ -358,6 +368,7 @@ class BroschPage(Gtk.Box, ViewModelMixin):
     # Dialog properties
     new_group = property(_get_new_group)
     new_filter = property(_get_new_filter)
+    new_file = property(_get_file)
     init_values = property(_get_init_values)
     confirm_deletion = property(_get_confirm_deletion)
 

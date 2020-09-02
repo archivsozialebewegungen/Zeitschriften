@@ -6,6 +6,7 @@ Created on 24.08.2020
 from injector import inject
 from asb.brosch.broschdaos import NoDataException, DataError,\
     Group, GroupDao, Brosch, BroschDao
+import os
     
 class GroupSelectionPresenter:
 
@@ -198,7 +199,16 @@ class BroschPresenter(GenericPresenter):
         if new_group is not None:
             self.viewmodel.gruppen_id = new_group.id
             self.save()
-        self.update_derived_fields()
+            self.update_derived_fields()
+        
+    def change_file(self):
+        
+        new_file = self.viewmodel.new_file
+        if new_file is not None:
+            self.viewmodel.datei = new_file.replace("%s/" % os.environ['BROSCH_DIR'], '')
+            self.viewmodel.digitalisiert = True
+            self.save()
+            self.update_derived_fields()
 
 class GroupPresenter(GenericPresenter):
     

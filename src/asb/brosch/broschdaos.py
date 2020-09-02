@@ -184,7 +184,10 @@ class BroschFilter:
         if self._title_contains == None:
             self._expression_cache = True
         else:    
-            self._expression_cache = BROSCH_TABLE.c.titel.ilike('%%%s%%' % self._title_contains)
+            self._expression_cache = or_(
+                    BROSCH_TABLE.c.titel.ilike('%%%s%%' % self._title_contains),
+                    BROSCH_TABLE.c.untertitel.ilike('%%%s%%' % self._title_contains)
+            )
         
         return self._expression_cache
     

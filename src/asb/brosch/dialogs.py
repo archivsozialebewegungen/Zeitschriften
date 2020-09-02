@@ -9,6 +9,7 @@ from injector import inject, singleton
 from asb.brosch.presenters import GroupSelectionPresenter,\
     BroschFilterDialogPresenter
 from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter
+import os
 
 class GroupSelectionDialog(Gtk.Dialog, ViewModelMixin):
     
@@ -297,3 +298,23 @@ class DeletionConfirmationDialogWrapper:
         dialog.destroy()
         
         return return_value
+
+@singleton    
+class BroschFileChooserDialogWrapper:
+    
+    def run(self):
+        dialog = Gtk.FileChooserDialog("Bitte Broschürendatei auswählen", None,
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+        dialog.set_current_folder(os.environ['BROSCH_DIR'])
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            file_path = dialog.get_filename()
+        elif response == Gtk.ResponseType.CANCEL:
+            file_path = None
+
+        dialog.destroy()
+        
+        return file_path
