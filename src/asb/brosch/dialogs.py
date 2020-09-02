@@ -175,6 +175,7 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
             Gtk.STOCK_APPLY, BroschFilterDialog.APPLY,
             Gtk.STOCK_CLEAR, BroschFilterDialog.CLEAR
         )
+        self.set_default_response(BroschFilterDialog.APPLY)
 
         self.set_default_size(150, 100)
 
@@ -262,6 +263,7 @@ class BroschFilterDialogWrapper:
                     dialog.errormessage = "Filter liefert keine Daten zurück!"
             elif response == BroschFilterDialog.CLEAR:
                 return_value = BroschFilter()
+                response_ok = True
                 
         dialog.destroy()
         

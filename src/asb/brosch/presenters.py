@@ -190,7 +190,7 @@ class BroschPresenter(GenericPresenter):
             return
         
         self.dao.filter = new_filter
-        self.dao.fetch_first(self.viewmodel)
+        self.fetch_first()
             
     def change_group(self):
         
