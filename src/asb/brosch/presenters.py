@@ -173,8 +173,8 @@ class BroschPresenter(GenericPresenter):
         
         if init_values[0] is not None:
             self.reset()
-            self.viewmodel.format = init_values[0]
-            self.viewmodel.hauptsystematik = init_values[1]
+            self.viewmodel.format = init_values[1]
+            self.viewmodel.hauptsystematik = init_values[0]
             self.toggle_editing()
     
     def delete(self):
