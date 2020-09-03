@@ -186,7 +186,9 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
         box.add(main_box)
 
         self._init_sorting(main_box)
-        self._init_title_filter(main_box)
+        self._init_filter(main_box)
+        self._init_combining(main_box)
+        
         self.errormessage_label = Gtk.Label()
         main_box.add(self.errormessage_label)
         self._update_widgets(brosch_filter)
@@ -194,6 +196,7 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
         self.show_all()
 
     def _init_sorting(self, box):
+        
         sortbox = Gtk.Box(spacing=6)
         box.add(sortbox)
 
@@ -206,14 +209,41 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
         self.signature_checkbutton.set_label("nach Signatur")
         sortbox.pack_start(self.signature_checkbutton, False, False, 0)
                 
+    def _init_combining(self, box):
         
-    def _init_title_filter(self, box):
+        combinebox = Gtk.Box(spacing=6)
+        box.add(combinebox)
+
+        combinebox.add(Gtk.Label(halign=Gtk.Align.START, label='Verknüpfung'))
+
+        self.and_checkbutton = Gtk.RadioButton.new_with_label_from_widget(None, "alle Bedingungen")
+        combinebox.pack_start(self.and_checkbutton, False, False, 0)
+
+        self.or_checkbutton = Gtk.RadioButton.new_from_widget(self.and_checkbutton)
+        self.or_checkbutton.set_label("irgendeine Bedingung")
+        combinebox.pack_start(self.or_checkbutton, False, False, 0)
         
-        entry_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 5)
-        box.add(entry_box)
-        entry_box.add(Gtk.Label(halign=Gtk.Align.START, label='Titel enthält:'))
-        self.titel_entry = Gtk.Entry()
-        box.add(self.titel_entry)
+    def _init_filter(self, box):
+        
+        
+        entry_grid = Gtk.Grid.new()
+        box.add(entry_grid)
+        
+        entry_grid.set_border_width(5)
+        entry_grid.set_row_spacing(5)
+        entry_grid.set_column_spacing(5)
+        
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Titel enthält:'), 1, 0, 1, 1)
+        self.titel_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.titel_entry, 2, 0, 1, 1)
+
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik:'), 1, 1, 1, 1)
+        self.systematik_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.systematik_entry, 2, 1, 1, 1)
+
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Ort:'), 1, 2, 1, 1)
+        self.ort_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.ort_entry, 2, 2, 1, 1)
              
     def _update_widgets(self, brosch_filter):
         
@@ -222,6 +252,13 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
         else:
             self.title_checkbutton.set_active(True)
         self._set_string_value(brosch_filter.titel_filter, self.titel_entry)
+        self._set_string_value(brosch_filter.systematik_filter, self.systematik_entry)
+        self._set_string_value(brosch_filter.ort_filter, self.ort_entry)
+        if brosch_filter.combination == BroschFilter.COMBINATION_AND:
+            self.and_checkbutton.set_active(True)
+        else:
+            self.or_checkbutton.set_active(True)
+            
         self._set_string_label('', self.errormessage_label)
 
     def _get_sort_order(self):
@@ -229,9 +266,19 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
             return BroschFilter.SIGNATUR_ORDER
         else:
             return BroschFilter.TITEL_ORDER
+        
+    def _get_combination(self):
+        
+        if self.and_checkbutton.get_active():
+            return BroschFilter.COMBINATION_AND
+        else:
+            return BroschFilter.COMBINATION_OR
 
     titel_filter = property(lambda self: self._get_string_value(self.titel_entry))
+    systematik_filter = property(lambda self: self._get_string_value(self.systematik_entry))
+    ort_filter = property(lambda self: self._get_string_value(self.ort_entry))
     sort_order = property(_get_sort_order)
+    combination = property(_get_combination)
     errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
                             lambda self, v: self._set_string_label(v, self.errormessage_label))
 
@@ -257,6 +304,9 @@ class BroschFilterDialogWrapper:
             elif response == BroschFilterDialog.APPLY:
                 return_value = BroschFilter()
                 return_value.titel_filter = dialog.titel_filter
+                return_value.systematik_filter = dialog.systematik_filter
+                return_value.ort_filter = dialog.ort_filter
+                return_value.combination = dialog.combination
                 return_value.sort_order = dialog.sort_order
                 if self.presenter.does_filter_return_results(return_value):
                     response_ok = True

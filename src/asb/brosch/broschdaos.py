@@ -145,12 +145,17 @@ class BroschFilter:
     SIGNATUR_ORDER = 'signatur'
     SORT_ORDERS = {'titel': [BROSCH_TABLE.c.titel, BROSCH_TABLE.c.id],
                    'signatur': [BROSCH_TABLE.c.hauptsystematik, BROSCH_TABLE.c.format, BROSCH_TABLE.c.nummer]}
+    COMBINATION_AND = 'and'
+    COMBINATION_OR = 'or'
     
     def __init__(self):
         
         self._title_contains = None
+        self._systematik = None
+        self._ort = None
         self._expression_cache = True
         self._sort_order = self.TITEL_ORDER
+        self._combination = self.COMBINATION_AND
     
     def _get_sort_order(self):
         
@@ -181,16 +186,72 @@ class BroschFilter:
         if self._expression_cache is not None:
             return self._expression_cache
         
-        if self._title_contains == None:
+        sub_expressions = self._get_subexpressions()
+        
+        if len(sub_expressions) == 0:
             self._expression_cache = True
-        else:    
-            self._expression_cache = or_(
-                    BROSCH_TABLE.c.titel.ilike('%%%s%%' % self._title_contains),
-                    BROSCH_TABLE.c.untertitel.ilike('%%%s%%' % self._title_contains)
-            )
+        else:
+            if self._combination == self.COMBINATION_AND:
+                self._expression_cache = and_(*sub_expressions)
+            else:
+                self._expression_cache = or_(*sub_expressions)
         
         return self._expression_cache
+        
+    def _get_subexpressions(self):
+        
+        expressions = []
+        
+        title_expression = self._get_title_expression()
+        if title_expression is not None:
+            expressions.append(title_expression)
+        ort_expression = self._get_ort_expression()
+        if ort_expression is not None:
+            expressions.append(ort_expression)
+        systematik_expression = self._get_systematik_expression()
+        if systematik_expression is not None:
+            expressions.append(systematik_expression)
+            
+        return expressions
+        
     
+    def _get_title_expression(self):
+        
+        if self._title_contains is None:
+            return None
+        
+        return or_(
+                    BROSCH_TABLE.c.titel.ilike('%%%s%%' % self._title_contains),
+                    BROSCH_TABLE.c.untertitel.ilike('%%%s%%' % self._title_contains)
+        )
+        
+    def _get_ort_expression(self):
+        
+        if self._ort is None:
+            return None
+        
+        return BROSCH_TABLE.c.ort.ilike('%%%s%%' % self._ort)
+    
+    def _get_systematik_expression(self):
+        
+        if self._systematik is None:
+            return None
+        
+        expressions = []
+        for column in [BROSCH_TABLE.c.systematik1, BROSCH_TABLE.c.systematik2]:
+            expressions.append(
+                or_(
+                    column == self._systematik,
+                    column.ilike('%s.%%' % self._systematik))
+            )
+        try:
+            int(self._systematik)
+            expressions.append(BROSCH_TABLE.c.hauptsystematik == self._systematik)
+        except ValueError:
+            pass
+        
+        return or_(*expressions)
+        
     def _set_title_filter(self, title_contains: str):
         
         self._title_contains = title_contains
@@ -199,6 +260,36 @@ class BroschFilter:
     def _get_title_filter(self):
         
         return self._title_contains
+    
+    def _set_systematik_filter(self, systematik: str):
+        
+        if systematik[-1] == '.':
+            self._systematik = systematik[0:-1]
+        else:
+            self._systematik = systematik
+        self._expression_cache = None
+        
+    def _get_systematik_filter(self):
+        
+        return self._systematik
+    
+    def _set_ort_filter(self, ort: str):
+        
+        self._ort = ort
+        self._expression_cache = None
+        
+    def _get_ort_filter(self):
+        
+        return self._ort
+    
+    def _set_combination(self, combination: str):
+        
+        self._combination = combination
+        self._expression_cache = None
+        
+    def _get_combination(self):
+        
+        return self._combination
     
     def reset(self):
         
@@ -255,6 +346,9 @@ class BroschFilter:
     sort_order_desc = property(_get_order_by_desc)
     filter_expression = property(_get_filter_expression)
     titel_filter = property(_get_title_filter, _set_title_filter)
+    systematik_filter = property(_get_systematik_filter, _set_systematik_filter)
+    ort_filter = property(_get_ort_filter, _set_ort_filter)
+    combination = property(_get_combination, _set_combination)
 
 @singleton    
 class BroschDao:
