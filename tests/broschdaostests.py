@@ -5,7 +5,8 @@ Created on 11.08.2020
 '''
 import unittest
 from sqlalchemy.engine import create_engine
-from Asb.Brosch.broschdaos import BroschDao, NoDataException,\
+from asb.brosch.broschdaos import BroschDao, Zeitschrift,\
+    ZeitschriftenDao, ZEITSCH_TABLE, NoDataException,\
     GROUP_TABLE, Group,\
     GroupDao, UNTERGRUPPEN_TABLE, DataError, VORLAEUFER_TABLE, BROSCH_TABLE,\
     BroschFilter, Brosch
@@ -13,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import insert
 
 
-class BroschDaos(unittest.TestCase):
+class TestBroschDao(unittest.TestCase):
 
 
     def setUp(self):
@@ -39,7 +40,7 @@ class BroschDaos(unittest.TestCase):
         brosch = self._save_brosch('My title')
         brosch2 = self.broschdao.fetch_by_id(1, Brosch())
         self.assertEqual(1, brosch2.id)
-        self.assertEquals(brosch.titel, brosch2.titel)
+        self.assertEqual(brosch.titel, brosch2.titel)
         self.assertEqual(1, self.broschdao.count())
         
     def testNoInsertWithoutTitle(self):
@@ -243,6 +244,7 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
         group = self.groupdao.fetch_first(Group())
@@ -253,6 +255,7 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
         group = self.groupdao.fetch_last(Group())
@@ -263,8 +266,10 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Gurkenname'
         self.groupdao.save(group)
 
@@ -280,11 +285,13 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Gurkenname'
         self.groupdao.save(group)
-
+        
         group = self.groupdao.fetch_previous(group)
         self.assertEqual('Gruppenname', group.name)
         group = self.groupdao.fetch_previous(group)
@@ -297,8 +304,10 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Gurkenname'
         self.groupdao.save(group)
         
@@ -327,8 +336,10 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Gurkenname'
         self.groupdao.save(group)
         
@@ -344,8 +355,10 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Gurkenname'
         self.groupdao.save(group)
         
@@ -361,8 +374,10 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Gurkenname'
         self.groupdao.save(group)
         
@@ -382,8 +397,10 @@ class TestGroupDao(unittest.TestCase):
         group = Group()
         group.name = 'Gruppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Truppenname'
         self.groupdao.save(group)
+        group = Group()
         group.name = 'Gurkenname'
         self.groupdao.save(group)
         
@@ -398,6 +415,30 @@ class TestGroupDao(unittest.TestCase):
         group = self.groupdao.fetch_by_id(3, Group())
         successors = self.groupdao.fetch_subgroups(group)
         self.assertEqual(0, len(successors))
+        
+class TestZeitschDao(unittest.TestCase):
+
+
+    def setUp(self):
+        
+        self.engine = create_engine('sqlite://')
+        self.connection = self.engine.connect()
+        ZEITSCH_TABLE.create(self.engine)
+        self.zdao = ZeitschriftenDao(self.connection)
+        self.number = 1
+        
+    def _save(self, titel):
+        
+        z = Zeitschrift()
+        z.titel = titel
+        return self.zdao.save(z)
+    
+    def test_save(self):
+        
+        self._save("Zeitschriftentitel")
+        z = self.zdao.fetch_by_id(1, Zeitschrift())
+        self.assertEqual("Zeitschriftentitel", z.titel)
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

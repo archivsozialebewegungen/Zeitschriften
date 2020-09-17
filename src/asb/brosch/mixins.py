@@ -84,7 +84,7 @@ class ViewModelMixin():
         box.pack_start(cell, False)
         box.add_attribute(cell, "text", 1)
         return box
-        
+
     def _set_id_list(self, id_list, combobox: Gtk.ComboBox):
         
         model = combobox.get_model()

@@ -5,7 +5,7 @@ Created on 11.08.2020
 '''
 from injector import inject, singleton, provider, Module
 
-from sqlalchemy.sql.schema import Table, MetaData, Column, ForeignKey,\
+from sqlalchemy.sql.schema import Table, MetaData, Column, ForeignKey, \
     UniqueConstraint
 from sqlalchemy.sql.sqltypes import Integer, String, Boolean
 from sqlalchemy.sql.expression import insert, select, update, and_, or_
@@ -14,6 +14,7 @@ from sqlalchemy.sql.functions import count, func
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import IntegrityError
 import os
+from alexandriabase import daos
 
 BROSCH_METADATA = MetaData()
 
@@ -80,13 +81,77 @@ BROSCH_TABLE = Table(
     UniqueConstraint('hauptsystematik', 'format', 'nummer')
 )
 
+ZEITSCH_TABLE = Table(
+    'zeitschriften',
+    BROSCH_METADATA,
+    Column('id', Integer, primary_key=True, nullable=False),
+    Column('plzalt', Integer),
+    Column('unimeldung', Boolean),
+    Column('untertitel', String),
+    Column('plz', Integer),
+    Column('fortlaufendbis', Integer),
+    Column('systematik1', String),
+    Column('systematik2', String),
+    Column('systematik3', String),
+    Column('digitalisiert', Boolean),
+    Column('verzeichnis', String),
+    Column('eingestellt', Boolean),
+    Column('land', String),
+    Column('koerperschaft', Boolean),
+    Column('herausgeber', String),
+    Column('standort', String),
+    Column('laufend', Boolean),
+    Column('spender', String),
+    Column('titel', String, nullable=False),
+    Column('komplett', Boolean),
+    Column('gruppen_id', Integer, ForeignKey('gruppen.id')),
+    Column('ort', String),
+    Column('fortlaufend', Boolean),
+    Column('bemerkung', String),
+    Column('unikat', Boolean),
+    Column('erster_jg', Integer),
+    Column('verlag', String),
+    Column('schuelerzeitung', Boolean),
+    Column('vorlaeufer', String),
+    Column('vorlaeufer_id', Integer, ForeignKey('zeitschriften.id')),
+    Column('nachfolger', String),
+    Column('nachfolger_id', Integer, ForeignKey('zeitschriften.id'))
+    )
+
+ZVORLAEUFER_TABLE = Table (
+    'zvorlaeufer',
+    BROSCH_METADATA,
+    Column('vid', Integer, ForeignKey('zeitschriften.id'), nullable=False),
+    Column('zid', Integer, ForeignKey('zeitschriften.id'), nullable=False),
+    UniqueConstraint('vid', 'zid')
+)
+
+JAHRGANG_TABLE = Table(
+    'jahrgaenge',
+    BROSCH_METADATA,
+    Column('id', Integer, primary_key=True, nullable=False),
+    Column('nummern', String),
+    Column('beschaedigt', String),
+    Column('fehlend', String),
+    Column('register', Boolean),
+    Column('visdp', String),
+    Column('komplett', Boolean),
+    Column('jahr', Integer),
+    Column('titel', String),
+    Column('zid', Integer, ForeignKey('zeitschriften.id', ondelete="CASCADE")),
+    UniqueConstraint('jahr', 'zid')
+)
+
+
 class NoDataException(Exception):
     pass
+
 
 class DataError(Exception):
     
     def __init__(self, message):
         self.message = message
+
         
 class Group:
     
@@ -107,6 +172,7 @@ class Group:
     def __str__(self):
         
         return self.name
+
     
 class Brosch:
     
@@ -138,49 +204,113 @@ class Brosch:
         self.hauptsystematik = None
         self.systematik1 = None
         self.systematik2 = None
+
+    def __str__(self):
         
-class BroschFilter:
+        return self.titel
     
-    TITEL_ORDER = 'titel'
-    SIGNATUR_ORDER = 'signatur'
-    SORT_ORDERS = {'titel': [BROSCH_TABLE.c.titel, BROSCH_TABLE.c.id],
-                   'signatur': [BROSCH_TABLE.c.hauptsystematik, BROSCH_TABLE.c.format, BROSCH_TABLE.c.nummer]}
+    def _get_signatur(self):
+
+        if self.hauptsystematik is None or self.format is None or self.nummer is None:        
+            return "Keine gültige Signatur"
+        else:
+            return "Bro %d.0.%d.%d" % (self.hauptsystematik, 
+                                       self.format, 
+                                       self.nummer)
+    
+    signatur = property(_get_signatur)
+        
+class Zeitschrift:
+    
+    def __init__(self):
+        
+        self.id = None
+        self.titel = None
+        self.untertitel = None
+        self.herausgeber = None
+        self.verlag = None
+        self.ort = None
+        self.plz = None
+        self.plzalt = None
+        self.land = None
+        
+        self.verzeichnis = None
+
+        self.bemerkung = None
+        self.spender = None
+        self.standort = None
+        
+        self.vorlaeufer = None
+        self.vorlaeufer_id = None
+        self.nachfolger = None
+        self.nachfolger_id = None
+        self.gruppen_id = None
+                
+        self.fortlaufend = None
+        self.fortlaufendbis = None
+        self.erster_jg = None
+        
+        self.unimeldung = None
+        self.eingestellt = None
+        self.koerperschaft = None
+        self.laufend = None
+        self.komplett = None
+        self.unikat = None
+        self.schuelerzeitung = None
+        self.digitalisiert = None
+        
+        self.systematik1 = None
+        self.systematik2 = None
+        self.systematik3 = None
+
+
+class Jahrgang:
+    
+    def __init__(self):
+        
+        self.id = None
+        self.erster_jg = None
+        self.jahr = None
+        self.nummern = None
+        self.beschaedigt = None
+        self.fehlend = None
+        self.visdp = None
+        self.titel = None
+        self.zid = None
+        self.komplett = False
+        self.register = False
+
+    def __str__(self):
+        
+        komplett = "N"
+        if self.komplett:
+            komplett = "K"
+        
+        jahrgang = None
+        if self.erster_jg is not None  and self.jahr is not None and self.erster_jg > 1000:
+            jahrgang = self.jahr - self.erster_jg + 1
+            
+        if jahrgang is not None:
+            return "%d. Jahrgang %d [%s]" % (jahrgang, self.jahr, komplett)
+        elif self.jahr is not None:
+            return "%d [%s]" % (self.jahr, komplett)
+        else:
+            return "Jahr unbekannt"
+
+class GenericFilter:
+
     COMBINATION_AND = 'and'
     COMBINATION_OR = 'or'
-    
+
     def __init__(self):
         
         self._title_contains = None
         self._systematik = None
         self._ort = None
         self._expression_cache = True
-        self._sort_order = self.TITEL_ORDER
         self._combination = self.COMBINATION_AND
-    
-    def _get_sort_order(self):
-        
-        return self._sort_order
-    
-    def _get_order_by_asc(self):
-    
-        column_list = []
-        for column in self.SORT_ORDERS[self._sort_order]:
-            column_list.append(column.asc())
-        return column_list
-    
-    def _get_order_by_desc(self):
-    
-        column_list = []
-        for column in self.SORT_ORDERS[self._sort_order]:
-            column_list.append(column.desc())
-        return column_list
-    
-    def _set_sort_order(self, order: str):
-        
-        if not order in self.SORT_ORDERS:
-            raise Exception('Sort order %s is not defined!' % order)
-        self._sort_order = order
-    
+        self.systematic_columns = []
+
     def _get_filter_expression(self):
         
         if self._expression_cache is not None:
@@ -213,7 +343,6 @@ class BroschFilter:
             expressions.append(systematik_expression)
             
         return expressions
-        
     
     def _get_title_expression(self):
         
@@ -221,8 +350,8 @@ class BroschFilter:
             return None
         
         return or_(
-                    BROSCH_TABLE.c.titel.ilike('%%%s%%' % self._title_contains),
-                    BROSCH_TABLE.c.untertitel.ilike('%%%s%%' % self._title_contains)
+                    self.table.c.titel.ilike('%%%s%%' % self._title_contains),
+                    self.table.c.untertitel.ilike('%%%s%%' % self._title_contains)
         )
         
     def _get_ort_expression(self):
@@ -230,27 +359,25 @@ class BroschFilter:
         if self._ort is None:
             return None
         
-        return BROSCH_TABLE.c.ort.ilike('%%%s%%' % self._ort)
-    
+        return self.table.c.ort.ilike('%%%s%%' % self._ort)
+
     def _get_systematik_expression(self):
         
+        raise Exception("Implement in child class.")
+    
+    def _get_systematik_expressions(self, columns):
+        
         if self._systematik is None:
-            return None
+            return []
         
         expressions = []
-        for column in [BROSCH_TABLE.c.systematik1, BROSCH_TABLE.c.systematik2]:
+        for column in columns:
             expressions.append(
                 or_(
                     column == self._systematik,
                     column.ilike('%s.%%' % self._systematik))
             )
-        try:
-            int(self._systematik)
-            expressions.append(BROSCH_TABLE.c.hauptsystematik == self._systematik)
-        except ValueError:
-            pass
-        
-        return or_(*expressions)
+        return expressions
         
     def _set_title_filter(self, title_contains: str):
         
@@ -263,7 +390,7 @@ class BroschFilter:
     
     def _set_systematik_filter(self, systematik: str):
         
-        if systematik[-1] == '.':
+        if systematik is not None and systematik[-1] == '.':
             self._systematik = systematik[0:-1]
         else:
             self._systematik = systematik
@@ -295,7 +422,64 @@ class BroschFilter:
         
         self._title_contains = None
         self._expression_cache = None
+
+    filter_expression = property(_get_filter_expression)
+    titel_filter = property(_get_title_filter, _set_title_filter)
+    systematik_filter = property(_get_systematik_filter, _set_systematik_filter)
+    ort_filter = property(_get_ort_filter, _set_ort_filter)
+    combination = property(_get_combination, _set_combination)
+            
+class BroschFilter(GenericFilter):
+    
+    TITEL_ORDER = 'titel'
+    SIGNATUR_ORDER = 'signatur'
+    SORT_ORDERS = {'titel': [BROSCH_TABLE.c.titel, BROSCH_TABLE.c.id],
+                   'signatur': [BROSCH_TABLE.c.hauptsystematik, BROSCH_TABLE.c.format, BROSCH_TABLE.c.nummer]}
+    
+    def __init__(self):
+
+        super().__init__()        
+        self._sort_order = self.TITEL_ORDER
+        self.table = BROSCH_TABLE
+    
+    def _get_sort_order(self):
         
+        return self._sort_order
+    
+    def _get_order_by_asc(self):
+    
+        column_list = []
+        for column in self.SORT_ORDERS[self._sort_order]:
+            column_list.append(column.asc())
+        return column_list
+    
+    def _get_order_by_desc(self):
+    
+        column_list = []
+        for column in self.SORT_ORDERS[self._sort_order]:
+            column_list.append(column.desc())
+        return column_list
+    
+    def _set_sort_order(self, order: str):
+        
+        if not order in self.SORT_ORDERS:
+            raise Exception('Sort order %s is not defined!' % order)
+        self._sort_order = order
+
+    def _get_systematik_expression(self):
+        
+        expressions = self._get_systematik_expressions([BROSCH_TABLE.c.systematik1, BROSCH_TABLE.c.systematik2])
+        try:
+            int(self._systematik)
+            expressions.append(BROSCH_TABLE.c.hauptsystematik == self._systematik)
+        except ValueError:
+            pass
+        except TypeError:
+            pass
+        
+        return or_(*expressions)
+
+    
     def get_previous_expression(self, brosch):
 
         if self._sort_order == self.TITEL_ORDER:
@@ -339,19 +523,228 @@ class BroschFilter:
                 and_(BROSCH_TABLE.c.hauptsystematik == brosch.hauptsystematik, BROSCH_TABLE.c.format > brosch.format),
                 BROSCH_TABLE.c.hauptsystematik > brosch.hauptsystematik
             )
-
     
     sort_order = property(_get_sort_order, _set_sort_order) 
     sort_order_asc = property(_get_order_by_asc) 
     sort_order_desc = property(_get_order_by_desc)
-    filter_expression = property(_get_filter_expression)
-    titel_filter = property(_get_title_filter, _set_title_filter)
-    systematik_filter = property(_get_systematik_filter, _set_systematik_filter)
-    ort_filter = property(_get_ort_filter, _set_ort_filter)
-    combination = property(_get_combination, _set_combination)
 
+class GruppenFilter:
+    
+    def __init__(self):
+        
+        self.filter_expression = True
+        self.sort_order_asc = [GROUP_TABLE.c.name.asc()]
+        self.sort_order_desc = [GROUP_TABLE.c.name.desc()]
+        
+    def get_next_expression(self, gruppe):
+        
+        return GROUP_TABLE.c.name > gruppe.name
+    
+    def get_previous_expression(self, gruppe):
+        
+        return GROUP_TABLE.c.name < gruppe.name
+
+class JahrgaengeFilter:
+    
+    def __init__(self):
+        
+        self.sort_order_asc = [JAHRGANG_TABLE.c.zid.asc(), JAHRGANG_TABLE.c.jahr.asc()]
+        self.sort_order_desc = [JAHRGANG_TABLE.c.zid.desc(), JAHRGANG_TABLE.c.jahr.desc()]
+        
+    def get_next_expression(self, jahrgang):
+        
+        return or_(
+                and_(JAHRGANG_TABLE.c.zid == jahrgang.zid,
+                     JAHRGANG_TABLE.c.jahr > jahrgang.jahr),
+                JAHRGANG_TABLE.zid > jahrgang.zid)
+    
+    def get_previous_expression(self, jahrgang):
+        
+        return or_(
+                and_(JAHRGANG_TABLE.c.zid == jahrgang.zid,
+                     JAHRGANG_TABLE.c.jahr < jahrgang.jahr),
+                JAHRGANG_TABLE.zid < jahrgang.zid)
+
+class ZeitschriftenFilter(GenericFilter):
+    
+    def __init__(self):
+        
+        super().__init__()
+        self.table = ZEITSCH_TABLE     
+        self.sort_order_asc = [self.table.c.titel.asc()]
+        self.sort_order_desc = [self.table.c.titel.desc()]
+        
+    def get_next_expression(self, zeitschrift):
+        
+        return self.table.c.titel > zeitschrift.titel
+    
+    def get_previous_expression(self, zeitschrift):
+        
+        return self.table.c.titel < zeitschrift.titel
+    
+    def _get_systematik_expression(self):
+        
+        expressions = self._get_systematik_expressions([self.table.c.systematik1, self.table.c.systematik2, self.table.c.systematik3])
+        return or_(*expressions)
+    
+class PageObject:
+    
+    def __init__(self, dao, object_type, object_filter, page_size=15):
+        
+        self.dao = dao
+        self.filter = object_filter
+        self.page_size = page_size
+        self.object_type = object_type
+        self.current_page = None
+        self.count = None
+        self.objects = []
+        
+    def init_object(self):
+        
+        self.dao.init_page_object(self)
+        
+    def fetch_next(self):
+        
+        if self.has_next_page():
+            self.current_page += 1
+            self.objects = self.dao.fetch_all(self)
+        else:
+            raise DataError("Es gibt keine weiteren Daten.")
+        
+    def fetch_previous(self):
+        
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.objects = self.dao.fetch_all(self)
+        else:
+            raise DataError("Das ist bereits die erste Seite.")
+    
+    def has_next_page(self):
+        
+        return self.current_page * self.page_size < self.count 
+        
+class GenericDao:
+    
+    def __init__(self, connection):
+        
+        self.connection = connection
+        
+    def count(self, object_filter=None):
+
+        if object_filter is None:
+            stmt = select([count()]).select_from(self.table).where(self.filter.filter_expression)
+        else:
+            stmt = select([count()]).select_from(self.table).where(object_filter.filter_expression)
+            
+        return self.connection.execute(stmt).scalar()
+    
+    def init_page_object(self, page_object):
+        
+        page_object.count = self.count(page_object.filter)
+        page_object.current_page = 0
+        page_object.objects = self.fetch_all(page_object)
+    
+    def fetch_all(self, page_object):
+        
+        stmt = select([self.join]).\
+            where(page_object.filter.filter_expression).\
+            order_by(*page_object.filter.sort_order_asc).\
+            offset(page_object.current_page * page_object.page_size).\
+            limit(page_object.page_size)
+        result = self.connection.execute(stmt)
+        objects = []
+        for row in result.fetchall():
+            objects.append(self._map_row(row, page_object.object_type()))
+        if len(objects) == 0:
+            raise DataError("Es gibt keine passenden Daten")
+        return objects
+    
+    def fetch_by_id(self, object_id, object):
+        
+        stmt = select([self.join]).where(self.table.c.id == object_id)
+        result = self.connection.execute(stmt)
+        rows = result.fetchall()
+        if len(rows) != 1:
+            raise Exception("No result or too many results for %s" % stmt)
+        return self._map_row(rows[0], object)
+    
+    def fetch_next(self, object):
+    
+        stmt = select([self.table]).where(
+            and_(
+                self.filter.filter_expression,
+                self.filter.get_next_expression(object)
+            )
+        ).order_by(*self.filter.sort_order_asc)
+        row = self.connection.execute(stmt).fetchone()
+        if row == None:
+            return self.fetch_first(object)
+        return self._map_row(row, object)
+
+    def fetch_previous(self, object):
+    
+        stmt = select([self.table]).where(
+            and_(
+                self.filter.filter_expression,
+                self.filter.get_previous_expression(object)
+            )
+        ).order_by(*self.filter.sort_order_desc)
+        row = self.connection.execute(stmt).fetchone()
+        if row == None:
+            return self.fetch_last(object)
+        return self._map_row(row, object)
+
+    def fetch_first(self, object):
+        query = select([self.table]).order_by(*self.filter.sort_order_asc).where(self.filter.filter_expression).limit(1)
+        row = self.connection.execute(query).fetchone()
+        if row == None:
+            raise NoDataException
+        return self._map_row(row, object)
+    
+    def fetch_last(self, object):
+        query = select([self.table]).order_by(*self.filter.sort_order_desc).where(self.filter.filter_expression).limit(1)
+        row = self.connection.execute(query).fetchone()
+        if row == None:
+            raise NoDataException
+        return self._map_row(row, object)
+
+    def save(self, object):
+        
+        if None == object.id:
+            return self._insert(object)
+        else:
+            return self._update(object)
+        
+    def delete(self, object_id):
+        
+        query = self.table.delete().where(self.table.c.id == object_id)
+        self.connection.execute(query)
+        
+    def _insert(self, object):
+        
+        stmt = insert(self.table).values(self._collect_values(object))
+        result = self.connection.execute(stmt)
+        object.id = result.inserted_primary_key[0] 
+        return object
+    
+    def _update(self, object):
+        
+        stmt = update(self.table).values(self._collect_values(object))\
+            .where(self.table.c.id == object.id)
+        self.connection.execute(stmt)
+        return object
+    
+    def _map_row(self, row, object):
+        
+        raise Exception("Please implement in child class")
+    
+    def _collect_values(self, object):
+
+        raise Exception("Please implement in child class")
+    
+        
 @singleton    
-class BroschDao:
+class BroschDao(GenericDao):
 
     A4 = 1
     A5 = 2
@@ -359,75 +752,12 @@ class BroschDao:
     @inject
     def __init__(self, connection: Connection):
         
-        self.connection = connection
+        super().__init__(connection)
         self.filter = BroschFilter()
+        self.table = BROSCH_TABLE
+        self.join = BROSCH_TABLE
 
-    def count(self):
-
-        stmt = select([count()]).select_from(BROSCH_TABLE).where(self.filter.filter_expression)
-        return self.connection.execute(stmt).scalar()
     
-    def fetch_by_id(self, brosch_id, brosch):
-        
-        stmt = select([BROSCH_TABLE]).where(BROSCH_TABLE.c.id == brosch_id)
-        result = self.connection.execute(stmt)
-        rows = result.fetchall()
-        if len(rows) != 1:
-            raise Exception("No result or too many results for %s" % stmt)
-        return self._map_row(rows[0], brosch)
-    
-    def fetch_next(self, brosch):
-    
-        stmt = select([BROSCH_TABLE]).where(
-            and_(
-                self.filter.filter_expression,
-                self.filter.get_next_expression(brosch)
-            )
-        ).order_by(*self.filter.sort_order_asc)
-        row = self.connection.execute(stmt).fetchone()
-        if row == None:
-            return self.fetch_first(brosch)
-        return self._map_row(row, brosch)
-    
-    def fetch_previous(self, brosch):
-    
-        stmt = select([BROSCH_TABLE]).where(
-            and_(
-                self.filter.filter_expression,
-                self.filter.get_previous_expression(brosch)
-            )
-        ).order_by(*self.filter.sort_order_desc)
-        row = self.connection.execute(stmt).fetchone()
-        if row == None:
-            return self.fetch_last(brosch)
-        return self._map_row(row, brosch)
-
-    def save(self, brosch):
-        
-        if None == brosch.id:
-            return self._insert(brosch)
-        else:
-            return self._update(brosch)
-        
-    def delete(self, brosch_id):
-        
-        query = BROSCH_TABLE.delete().where(BROSCH_TABLE.c.id == brosch_id)
-        self.connection.execute(query)
-    
-    def fetch_first(self, brosch):
-        query = select([BROSCH_TABLE]).order_by(*self.filter.sort_order_asc).where(self.filter.filter_expression).limit(1)
-        row = self.connection.execute(query).fetchone()
-        if row == None:
-            raise NoDataException
-        return self._map_row(row, brosch)
-    
-    def fetch_last(self, brosch):
-        query = select([BROSCH_TABLE]).order_by(*self.filter.sort_order_desc).where(self.filter.filter_expression).limit(1)
-        row = self.connection.execute(query).fetchone()
-        if row == None:
-            raise NoDataException
-        return self._map_row(row, brosch)
-
     def fetch_next_number(self, hauptsystematik: int, format: int):
         
         max = self.connection.execute(select([func.max(BROSCH_TABLE.c.nummer)]).where(
@@ -459,14 +789,7 @@ class BroschDao:
                 result = self.connection.execute(stmt)
             else:
                 raise e
-        brosch.id =  result.inserted_primary_key[0]
-        return brosch
-    
-    def _update(self, brosch):
-        
-        stmt = update(BROSCH_TABLE).values(self._collect_values(brosch))\
-            .where(BROSCH_TABLE.c.id == brosch.id)
-        self.connection.execute(stmt)
+        brosch.id = result.inserted_primary_key[0]
         return brosch
     
     def _collect_values(self, brosch):
@@ -528,13 +851,17 @@ class BroschDao:
         brosch.systematik2 = row[BROSCH_TABLE.c.systematik2]
         return brosch
 
+
 @singleton
-class GroupDao:
+class GroupDao(GenericDao):
     
     @inject
     def __init__(self, connection: Connection):
         
-        self.connection = connection
+        super().__init__(connection)
+        self.table = GROUP_TABLE
+        self.join = GROUP_TABLE
+        self.filter = GruppenFilter()
         
     def count_selection(self, selection):
 
@@ -553,57 +880,6 @@ class GroupDao:
             groups.append(self._map_row(row, Group()))
             
         return groups
-
-    def save(self, group: Group):
-        
-        if group.id == None:
-            return self._insert(group)
-        else:
-            return self._update(group)
-        
-    def delete(self, group_id):
-        
-        if group_id is None:
-            return
-        query = GROUP_TABLE.delete().where(GROUP_TABLE.c.id == group_id)
-        self.connection.execute(query)
-        
-    def fetch_by_id(self, groupid, group):
-        query = select([GROUP_TABLE]).where(GROUP_TABLE.c.id == groupid)
-        row = self.connection.execute(query).fetchone()
-        if row == None:
-            raise NoDataException
-        return self._map_row(row, group)
-    
-    def fetch_first(self, group):
-        sub_query = select([func.min(GROUP_TABLE.c.name)]).as_scalar()
-        query = select([GROUP_TABLE]).where(GROUP_TABLE.c.name == sub_query)
-        row = self.connection.execute(query).fetchone()
-        if row == None:
-            raise NoDataException
-        return self._map_row(row, group)
-    
-    def fetch_last(self, group):
-        sub_query = select([func.max(GROUP_TABLE.c.name)]).as_scalar()
-        query = select([GROUP_TABLE]).where(GROUP_TABLE.c.name == sub_query)
-        row = self.connection.execute(query).fetchone()
-        if row == None:
-            raise NoDataException
-        return self._map_row(row, group)
-    
-    def fetch_next(self, group):
-        query = select([GROUP_TABLE]).where(GROUP_TABLE.c.name > group.name).order_by(GROUP_TABLE.c.name.asc())
-        row = self.connection.execute(query).fetchone()
-        if row == None:
-            return self.fetch_first(group)
-        return self._map_row(row, group)
-    
-    def fetch_previous(self, group):
-        query = select([GROUP_TABLE]).where(GROUP_TABLE.c.name < group.name).order_by(GROUP_TABLE.c.name.desc())
-        row = self.connection.execute(query).fetchone()
-        if row == None:
-            return self.fetch_last(group)
-        return self._map_row(row, group)
     
     def fetch_subgroups(self, group):
         
@@ -655,19 +931,6 @@ class GroupDao:
             groups.append(self._map_row(row, Group()))
         return groups
     
-    def _insert(self, group):
-        
-        stmt = insert(GROUP_TABLE).values(self._collect_values(group))
-        result = self.connection.execute(stmt)
-        return result.inserted_primary_key[0]
-    
-    def _update(self, group):
-        
-        stmt = update(GROUP_TABLE).values(self._collect_values(group))\
-            .where(GROUP_TABLE.c.id == group.id)
-        self.connection.execute(stmt)
-        return group.id
-
     def _collect_values(self, group):
     
         return {'name': group.name,
@@ -697,7 +960,177 @@ class GroupDao:
         group.systematik1 = row[GROUP_TABLE.c.systematik1]
         group.systematik2 = row[GROUP_TABLE.c.systematik2]
         return group
+
+
+class ZeitschriftenDao(GenericDao):
     
+    @inject
+    def __init__(self, connection: Connection):
+        
+        super().__init__(connection)
+        self.table = ZEITSCH_TABLE
+        self.join = ZEITSCH_TABLE
+        self.filter = ZeitschriftenFilter()
+        
+    def _map_row(self, row, zeitschrift):
+        
+        zeitschrift.id = row[ZEITSCH_TABLE.c.id]
+        zeitschrift.titel = row[ZEITSCH_TABLE.c.titel]
+        zeitschrift.untertitel = row[ZEITSCH_TABLE.c.untertitel]
+        zeitschrift.herausgeber = row[ZEITSCH_TABLE.c.herausgeber]
+        zeitschrift.verlag = row[ZEITSCH_TABLE.c.verlag]
+        zeitschrift.ort = row[ZEITSCH_TABLE.c.ort]
+        zeitschrift.plz = row[ZEITSCH_TABLE.c.plz]
+        zeitschrift.plzalt = row[ZEITSCH_TABLE.c.plzalt]
+        zeitschrift.land = row[ZEITSCH_TABLE.c.land]
+        
+        zeitschrift.verzeichnis = row[ZEITSCH_TABLE.c.verzeichnis]
+
+        zeitschrift.bemerkung = row[ZEITSCH_TABLE.c.bemerkung]
+        zeitschrift.spender = row[ZEITSCH_TABLE.c.spender]
+        zeitschrift.standort = row[ZEITSCH_TABLE.c.standort]
+        
+        zeitschrift.vorlaeufer = row[ZEITSCH_TABLE.c.vorlaeufer]
+        zeitschrift.vorlaeufer_id = row[ZEITSCH_TABLE.c.vorlaeufer_id]
+        zeitschrift.nachfolger = row[ZEITSCH_TABLE.c.nachfolger]
+        zeitschrift.nachfolger_id = row[ZEITSCH_TABLE.c.nachfolger_id]
+        zeitschrift.gruppen_id = row[ZEITSCH_TABLE.c.gruppen_id]
+                
+        zeitschrift.fortlaufend = row[ZEITSCH_TABLE.c.fortlaufend]
+        zeitschrift.fortlaufendbis = row[ZEITSCH_TABLE.c.fortlaufendbis]
+        zeitschrift.erster_jg = row[ZEITSCH_TABLE.c.erster_jg]
+        
+        zeitschrift.unimeldung = row[ZEITSCH_TABLE.c.unimeldung]
+        zeitschrift.eingestellt = row[ZEITSCH_TABLE.c.eingestellt]
+        zeitschrift.koerperschaft = row[ZEITSCH_TABLE.c.koerperschaft]
+        zeitschrift.laufend = row[ZEITSCH_TABLE.c.laufend]
+        zeitschrift.komplett = row[ZEITSCH_TABLE.c.komplett]
+        zeitschrift.unikat = row[ZEITSCH_TABLE.c.unikat]
+        zeitschrift.schuelerzeitung = row[ZEITSCH_TABLE.c.schuelerzeitung]
+        zeitschrift.digitalisiert = row[ZEITSCH_TABLE.c.digitalisiert]
+        
+        zeitschrift.systematik1 = row[ZEITSCH_TABLE.c.systematik1]
+        zeitschrift.systematik2 = row[ZEITSCH_TABLE.c.systematik2]
+        zeitschrift.systematik3 = row[ZEITSCH_TABLE.c.systematik3]
+        
+        return zeitschrift
+    
+    def _collect_values(self, zeitschrift):
+        
+        return {
+            'plzalt': zeitschrift.plzalt,
+            'unimeldung': zeitschrift.unimeldung,
+            'untertitel': zeitschrift.untertitel,
+            'plz': zeitschrift.plz,
+            'fortlaufendbis': zeitschrift.fortlaufendbis,
+            'systematik1': zeitschrift.systematik1,
+            'systematik2': zeitschrift.systematik2,
+            'systematik3': zeitschrift.systematik3,
+            'digitalisiert': zeitschrift.digitalisiert,
+            'verzeichnis': zeitschrift.verzeichnis,
+            'eingestellt': zeitschrift.eingestellt,
+            'land': zeitschrift.land,
+            'koerperschaft': zeitschrift.koerperschaft,
+            'herausgeber': zeitschrift.herausgeber,
+            'standort': zeitschrift.standort,
+            'laufend': zeitschrift.laufend,
+            'spender': zeitschrift.spender,
+            'titel': zeitschrift.titel,
+            'komplett': zeitschrift.komplett,
+            'gruppen_id': zeitschrift.gruppen_id,
+            'ort': zeitschrift.ort,
+            'fortlaufend': zeitschrift.fortlaufend,
+            'bemerkung': zeitschrift.bemerkung,
+            'unikat': zeitschrift.unikat,
+            'erster_jg': zeitschrift.erster_jg,
+            'verlag': zeitschrift.verlag,
+            'schuelerzeitung': zeitschrift.schuelerzeitung,
+            'vorlaeufer': zeitschrift.vorlaeufer,
+            'vorlaeufer_id': zeitschrift.vorlaeufer_id,
+            'nachfolger': zeitschrift.nachfolger,
+            'nachfolger_id': zeitschrift.nachfolger_id
+        }
+        
+    def fetch_vorlaeufer(self, object):
+        
+        query = select([ZEITSCH_TABLE, ZVORLAEUFER_TABLE]).\
+            where(
+                and_(ZEITSCH_TABLE.c.id == ZVORLAEUFER_TABLE.c.vid,
+                     ZVORLAEUFER_TABLE.c.zid == object.id)
+                )
+        
+        vorlaeufer = []
+        result = self.connection.execute(query)
+        for row in result.fetchall():
+            vorlaeufer.append(self._map_row(row, Zeitschrift()))
+        return vorlaeufer
+                
+    def fetch_nachfolger(self, zeitschrift):
+        
+        query = select([ZEITSCH_TABLE, ZVORLAEUFER_TABLE]).\
+            where(
+                and_(ZEITSCH_TABLE.c.id == ZVORLAEUFER_TABLE.c.zid,
+                     ZVORLAEUFER_TABLE.c.vid == zeitschrift.id)
+                )
+        
+        nachfolger = []
+        result = self.connection.execute(query)
+        for row in result.fetchall():
+            nachfolger.append(self._map_row(row, Zeitschrift()))
+        return nachfolger
+    
+    
+    
+class JahrgaengeDao(GenericDao):
+    
+    @inject
+    def __init__(self, connection: Connection):
+        super().__init__(connection)
+        self.table = JAHRGANG_TABLE
+        self.join = JAHRGANG_TABLE.join(ZEITSCH_TABLE, ZEITSCH_TABLE.c.id == JAHRGANG_TABLE.c.zid)
+        self.filter = JahrgaengeFilter()
+
+    def fetch_jahrgaenge_for_zeitschrift(self, zeitschrift):
+
+        query = select([self.join]).\
+        where(JAHRGANG_TABLE.c.zid == zeitschrift.id).\
+        order_by(JAHRGANG_TABLE.c.jahr)
+        
+        result = self.connection.execute(query)
+        jahrgaenge = []
+        for row in result.fetchall():
+            jahrgaenge.append(self._map_row(row, Jahrgang()))
+        return jahrgaenge
+
+    def _map_row(self, row, j):
+        
+        j.id = row[JAHRGANG_TABLE.c.id]
+        j.erster_jg = row[ZEITSCH_TABLE.c.erster_jg]
+        j.jahr = row[JAHRGANG_TABLE.c.jahr]
+        j.nummern = row[JAHRGANG_TABLE.c.nummern]
+        j.beschaedigt = row[JAHRGANG_TABLE.c.beschaedigt]
+        j.fehlend = row[JAHRGANG_TABLE.c.fehlend]
+        j.visdp = row[JAHRGANG_TABLE.c.visdp]
+        j.titel = row[JAHRGANG_TABLE.c.titel]
+        j.zid = row[JAHRGANG_TABLE.c.zid]
+        j.komplett = row[JAHRGANG_TABLE.c.komplett]
+        j.register = row[JAHRGANG_TABLE.c.register]
+        return j
+
+    def _collect_values(self, jahrgang):
+        
+        return {
+            'jahr': jahrgang.jahr,
+            'nummern': jahrgang.nummern,
+            'beschaedigt': jahrgang.beschaedigt,
+            'fehlend': jahrgang.fehlend,
+            'titel': jahrgang.titel,
+            'zid': jahrgang.zid,
+            'visdp': jahrgang.visdp,
+            'komplett': jahrgang.komplett,
+            'register': jahrgang.register
+        }
+
 class BroschDbModule(Module):
 
     @singleton

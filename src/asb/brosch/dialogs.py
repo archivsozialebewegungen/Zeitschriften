@@ -7,9 +7,12 @@ from gi.repository import Gtk
 from asb.brosch.mixins import ViewModelMixin
 from injector import inject, singleton
 from asb.brosch.presenters import GroupSelectionPresenter,\
-    BroschFilterDialogPresenter
-from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter
+    BroschFilterDialogPresenter, JahrgangEditDialogPresenter,\
+    ZeitschriftenFilterDialogPresenter, BroschSearchDialogPresenter
+from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter,\
+    ZeitschriftenFilter, Brosch
 import os
+from os.path import isdir
 
 class GroupSelectionDialog(Gtk.Dialog, ViewModelMixin):
     
@@ -320,6 +323,137 @@ class BroschFilterDialogWrapper:
         
         return return_value
 
+class ZeitschriftenFilterDialog(Gtk.Dialog, ViewModelMixin):
+    
+    CANCEL = 1
+    APPLY = 2
+    CLEAR = 3
+    
+    def __init__(self, z_filter):
+
+        Gtk.Dialog.__init__(self, title="Zeitschriftenfilter", flags=0)
+        self.add_buttons(
+            Gtk.STOCK_CANCEL, BroschFilterDialog.CANCEL,
+            Gtk.STOCK_APPLY, BroschFilterDialog.APPLY,
+            Gtk.STOCK_CLEAR, BroschFilterDialog.CLEAR
+        )
+        self.set_default_response(BroschFilterDialog.APPLY)
+
+        self.set_default_size(150, 100)
+
+        box = self.get_content_area()
+
+        main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        box.add(main_box)
+
+        self._init_filter(main_box)
+        self._init_combining(main_box)
+        
+        self.errormessage_label = Gtk.Label()
+        main_box.add(self.errormessage_label)
+        self._update_widgets(z_filter)
+        
+        self.show_all()
+
+    def _init_combining(self, box):
+        
+        combinebox = Gtk.Box(spacing=6)
+        box.add(combinebox)
+
+        combinebox.add(Gtk.Label(halign=Gtk.Align.START, label='Verknüpfung'))
+
+        self.and_checkbutton = Gtk.RadioButton.new_with_label_from_widget(None, "alle Bedingungen")
+        combinebox.pack_start(self.and_checkbutton, False, False, 0)
+
+        self.or_checkbutton = Gtk.RadioButton.new_from_widget(self.and_checkbutton)
+        self.or_checkbutton.set_label("irgendeine Bedingung")
+        combinebox.pack_start(self.or_checkbutton, False, False, 0)
+        
+    def _init_filter(self, box):
+        
+        
+        entry_grid = Gtk.Grid.new()
+        box.add(entry_grid)
+        
+        entry_grid.set_border_width(5)
+        entry_grid.set_row_spacing(5)
+        entry_grid.set_column_spacing(5)
+        
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Titel enthält:'), 1, 0, 1, 1)
+        self.titel_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.titel_entry, 2, 0, 1, 1)
+
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik:'), 1, 1, 1, 1)
+        self.systematik_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.systematik_entry, 2, 1, 1, 1)
+
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Ort:'), 1, 2, 1, 1)
+        self.ort_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.ort_entry, 2, 2, 1, 1)
+             
+    def _update_widgets(self, z_filter):
+        
+        self._set_string_value(z_filter.titel_filter, self.titel_entry)
+        self._set_string_value(z_filter.systematik_filter, self.systematik_entry)
+        self._set_string_value(z_filter.ort_filter, self.ort_entry)
+        if z_filter.combination == ZeitschriftenFilter.COMBINATION_AND:
+            self.and_checkbutton.set_active(True)
+        else:
+            self.or_checkbutton.set_active(True)
+            
+        self._set_string_label('', self.errormessage_label)
+
+    def _get_combination(self):
+        
+        if self.and_checkbutton.get_active():
+            return BroschFilter.COMBINATION_AND
+        else:
+            return BroschFilter.COMBINATION_OR
+
+    titel_filter = property(lambda self: self._get_string_value(self.titel_entry))
+    systematik_filter = property(lambda self: self._get_string_value(self.systematik_entry))
+    ort_filter = property(lambda self: self._get_string_value(self.ort_entry))
+    combination = property(_get_combination)
+    errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
+                            lambda self, v: self._set_string_label(v, self.errormessage_label))
+
+@singleton
+class ZeitschriftenFilterDialogWrapper:
+    
+    @inject
+    def __init__(self, presenter: ZeitschriftenFilterDialogPresenter):
+        
+        self.presenter = presenter
+    
+    def run(self):
+        
+        dialog = ZeitschriftenFilterDialog(self.presenter.get_current_filter())
+
+        response_ok = False        
+        while not response_ok:
+            return_value = None
+            response = dialog.run()
+            dialog.errormessage = ''
+            if response == ZeitschriftenFilterDialog.CANCEL:
+                response_ok = True
+            elif response == ZeitschriftenFilterDialog.APPLY:
+                return_value = ZeitschriftenFilter()
+                return_value.titel_filter = dialog.titel_filter
+                return_value.systematik_filter = dialog.systematik_filter
+                return_value.ort_filter = dialog.ort_filter
+                return_value.combination = dialog.combination
+                if self.presenter.does_filter_return_results(return_value):
+                    response_ok = True
+                else:
+                    dialog.errormessage = "Filter liefert keine Daten zurück!"
+            elif response == ZeitschriftenFilterDialog.CLEAR:
+                return_value = ZeitschriftenFilter
+                response_ok = True
+                
+        dialog.destroy()
+        
+        return return_value
+
 class DeletionConfirmationDialog(Gtk.MessageDialog):
     
     def __init__(self):
@@ -368,3 +502,365 @@ class BroschFileChooserDialogWrapper:
         dialog.destroy()
         
         return file_path
+
+@singleton    
+class ZeitschDirectoryChooserDialogWrapper:
+    
+    def run(self):
+        dialog = Gtk.FileChooserDialog("Bitte Verzeichnis auswählen", None,
+            Gtk.FileChooserAction.SELECT_FOLDER,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+        dialog.set_current_folder(os.environ['ZEITSCH_DIR'])
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            file_path = dialog.get_filename()
+        elif response == Gtk.ResponseType.CANCEL:
+            file_path = None
+ 
+        dialog.destroy()
+        
+        return file_path
+
+class JahrgangDialog(Gtk.Dialog, ViewModelMixin):
+    
+    CANCEL = 1
+    SAVE = 2
+    DELETE = 3
+    
+    def __init__(self, confirm_deletion_dialog: DeletionConfirmationDialogWrapper):
+
+        self.confirm_deletion_dialog = confirm_deletion_dialog
+        
+        self._id = None
+        
+        Gtk.Dialog.__init__(self, title="Jahrgang bearbeiten", flags=0)
+        self.add_buttons(
+            Gtk.STOCK_CANCEL, JahrgangDialog.CANCEL,
+            Gtk.STOCK_SAVE, JahrgangDialog.SAVE,
+            Gtk.STOCK_DELETE, JahrgangDialog.DELETE
+        )
+        self.set_default_response(JahrgangDialog.CANCEL)
+
+        self.set_default_size(250, 200)
+
+        box = self.get_content_area()
+
+        main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        box.add(main_box)
+
+        self._init_grid(main_box)
+        
+        self.errormessage_label = Gtk.Label()
+        main_box.add(self.errormessage_label)
+
+        self.show_all()
+
+    def _init_grid(self, box):
+        
+        # without display
+        self.zid = None
+        self.titel = None
+        self.erster_jg = None
+        
+        self.grid = Gtk.Grid()
+        self.grid.set_border_width(5)
+        self.grid.set_row_spacing(5)
+        self.grid.set_column_spacing(5)
+        
+        box.pack_start(self.grid, True, True, 0)
+        
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Jahr:'), 1, 0, 1, 1)
+        self.jahr_entry = Gtk.Entry(width_chars=10)
+        self.grid.attach(self.jahr_entry, 2, 0, 1, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='ViSdP:'), 3, 0, 1, 1)
+        self.visdp_entry = Gtk.Entry(width_chars=20)
+        self.grid.attach(self.visdp_entry, 4, 0, 3, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Nummern:'), 1, 1, 1, 1)
+        self.nummern_entry = Gtk.Entry(width_chars=40)
+        self.grid.attach(self.nummern_entry, 2, 1, 5, 1)
+                
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Beschädigt:'), 1, 2, 1, 1)
+        self.beschaedigt_entry = Gtk.Entry(width_chars=40)
+        self.grid.attach(self.beschaedigt_entry, 2, 2, 5, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Fehlend:'), 1, 3, 1, 1)
+        self.fehlend_entry = Gtk.Entry(width_chars=40)
+        self.grid.attach(self.fehlend_entry, 2, 3, 5, 1)
+
+        self.komplett_checkbutton = Gtk.CheckButton(label="Komplett")
+        self.grid.attach(self.komplett_checkbutton, 1, 4, 1, 1)
+
+        self.register_checkbutton = Gtk.CheckButton(label="Register")
+        self.grid.attach(self.register_checkbutton, 2, 4, 1, 1)
+
+    def _set_id(self, value):
+        self._id = value
+        self.jahr_entry.set_sensitive(value is None)
+        
+    def _get_id(self):
+        return self._id
+
+    def _get_confirm_deletion(self):
+        
+        return self.confirm_deletion_dialog.run()
+                
+    id = property(_get_id, _set_id)
+    nummern = property(lambda self: self._get_string_value(self.nummern_entry),
+                            lambda self, v: self._set_string_value(v, self.nummern_entry))
+    beschaedigt = property(lambda self: self._get_string_value(self.beschaedigt_entry),
+                            lambda self, v: self._set_string_value(v, self.beschaedigt_entry))
+    fehlend = property(lambda self: self._get_string_value(self.fehlend_entry),
+                            lambda self, v: self._set_string_value(v, self.fehlend_entry))
+    errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
+                            lambda self, v: self._set_string_label(v, self.errormessage_label))
+    visdp = property(lambda self: self._get_string_value(self.visdp_entry),
+                            lambda self, v: self._set_string_value(v, self.visdp_entry))
+    jahr = property(lambda self: self._get_int_value(self.jahr_entry, 'Jahr'),
+                            lambda self, v: self._set_int_value(v, self.jahr_entry))
+    komplett = property(lambda self: self._get_bool_value(self.komplett_checkbutton),
+                            lambda self, v: self._set_bool_value(v, self.komplett_checkbutton))
+    register = property(lambda self: self._get_bool_value(self.register_checkbutton),
+                            lambda self, v: self._set_bool_value(v, self.register_checkbutton))
+    # Administrative property
+    confirm_deletion = property(_get_confirm_deletion)
+
+@singleton
+class JahrgangEditDialogWrapper:
+    
+    @inject
+    def __init__(self, presenter: JahrgangEditDialogPresenter,
+                 confirm_deletion_dialog: DeletionConfirmationDialogWrapper):
+        
+        self.presenter = presenter
+        self.confirm_deletion_dialog = confirm_deletion_dialog
+    
+    def run(self, jahrgang_id=None, zid=None):
+        
+        dialog = JahrgangDialog(self.confirm_deletion_dialog)
+        self.presenter.viewmodel = dialog
+        if zid is None:
+            if jahrgang_id is not None:
+                self.presenter.fetch_by_id(jahrgang_id)
+            else:
+                raise Exception("Entweder jahrgang_id oder zid müssen gesetzt sein")
+        else:
+            if jahrgang_id is None:
+                dialog.zid = zid
+            else:
+                raise Exception("Es dürfen nicht jahrgang_id und zid gesetzt sein")
+        
+        response_ok = False        
+        while not response_ok:
+            response = dialog.run()
+            dialog.errormessage = ''
+            if response == JahrgangDialog.CANCEL:
+                response_ok = True
+            elif response == JahrgangDialog.SAVE:
+                try:
+                    self.presenter.save()
+                    response_ok = True
+                except DataError as e:
+                    dialog.errormessage = e.message
+            elif response == JahrgangDialog.DELETE:
+                try:
+                    self.presenter.delete()
+                    dialog.id = None
+                    response_ok = True
+                except DataError as e:
+                    dialog.errormessage = e.message
+        
+        jid = dialog.id
+        dialog.destroy()
+        
+        if jid is not None:
+            return self.presenter.fetch_by_id(jid)
+        
+        return None
+
+class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
+    
+    CANCEL = 1
+    FIND = 2
+    OK = 3
+    
+    def __init__(self, presenter):
+
+        self.presenter = presenter
+        self.presenter.viewmodel = self
+        
+        Gtk.Dialog.__init__(self, title="Broschürensuche", flags=0)
+        self.add_buttons(
+            Gtk.STOCK_FIND, BroschSearchDialog.FIND,
+            Gtk.STOCK_CANCEL, BroschSearchDialog.CANCEL,
+            Gtk.STOCK_OK, BroschSearchDialog.OK
+        )
+        self.set_default_response(BroschSearchDialog.FIND)
+
+        self.set_default_size(500, 600)
+
+        box = self.get_content_area()
+
+        main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        box.add(main_box)
+        
+        self._init_searchfields(main_box)
+        self._init_combining(main_box)
+        self._init_navigation(main_box)
+        
+        self.result_combobox = self._create_treeview()
+        main_box.add(self.result_combobox)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Signatur", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].signatur))
+        self.result_combobox.append_column(col)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Title", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].titel))
+        self.result_combobox.append_column(col)
+                
+        self.errormessage_label = Gtk.Label()
+        main_box.add(self.errormessage_label)
+        
+        self.show_all()
+
+    def _init_navigation(self, box):
+        
+        navbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        Gtk.StyleContext.add_class(navbox.get_style_context(), "linked")
+
+        button = Gtk.Button.new_from_icon_name("pan-start-symbolic", Gtk.IconSize.MENU)
+        button.connect("clicked", lambda button: self.presenter.prev_page())
+        navbox.add(button)
+
+        button = Gtk.Button.new_from_icon_name("pan-end-symbolic", Gtk.IconSize.MENU)
+        button.connect("clicked", lambda button: self.presenter.next_page())
+        navbox.add(button)
+        
+        self.result_stat_label = Gtk.Label(label="Noch keine Suche durchgeführt!")
+        navbox.add(self.result_stat_label)
+        
+
+        
+        box.add(navbox)
+    def _create_treeview(self):
+        
+        view = Gtk.TreeView(Gtk.ListStore(object))
+        return view
+
+    def _set_tree_view(self, brosch_list, treeview: Gtk.TreeView):
+        
+        model = treeview.get_model()
+        
+        while len(model) > 0:
+            model.remove(model.get_iter(len(model) - 1))
+        for element in brosch_list:
+            model.append([element])
+            
+    def _get_brosch_from_tree_view(self, treeview: Gtk.TreeView):
+        
+        model, tree_iter = treeview.get_selection().get_selected()        
+
+        if tree_iter is not None:
+            return model[tree_iter][0]
+        
+        return None
+        
+    def _init_combining(self, box):
+        
+        combinebox = Gtk.Box(spacing=6)
+        box.add(combinebox)
+
+        combinebox.add(Gtk.Label(halign=Gtk.Align.START, label='Verknüpfung'))
+
+        self.and_checkbutton = Gtk.RadioButton.new_with_label_from_widget(None, "alle Bedingungen")
+        combinebox.pack_start(self.and_checkbutton, False, False, 0)
+
+        self.or_checkbutton = Gtk.RadioButton.new_from_widget(self.and_checkbutton)
+        self.or_checkbutton.set_label("irgendeine Bedingung")
+        combinebox.pack_start(self.or_checkbutton, False, False, 0)
+
+    def _init_searchfields(self, box):
+        
+        entry_grid = Gtk.Grid.new()
+        box.add(entry_grid)
+        
+        entry_grid.set_border_width(5)
+        entry_grid.set_row_spacing(5)
+        entry_grid.set_column_spacing(5)
+        
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Titel enthält:'), 1, 0, 1, 1)
+        self.titel_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.titel_entry, 2, 0, 1, 1)
+
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik:'), 1, 1, 1, 1)
+        self.systematik_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.systematik_entry, 2, 1, 1, 1)
+
+        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Ort:'), 1, 2, 1, 1)
+        self.ort_entry = Gtk.Entry(width_chars=40)
+        entry_grid.attach(self.ort_entry, 2, 2, 1, 1)
+
+    def _get_filter(self):
+        
+        brosch_filter = BroschFilter()
+        brosch_filter.titel_filter = self._get_string_value(self.titel_entry)
+        brosch_filter.systematik_filter = self._get_string_value(self.systematik_entry)
+        brosch_filter.ort_filter = self._get_string_value(self.ort_entry)
+        if self.and_checkbutton.get_active():
+            brosch_filter.combination = BroschFilter.COMBINATION_AND
+        else:
+            brosch_filter.combination = BroschFilter.COMBINATION_OR
+        return brosch_filter
+    
+    def _set_filter(self, brosch_filter):
+        
+        self._set_string_value(brosch_filter.titel_filter, self.titel_entry)
+        self._set_string_value(brosch_filter.systematik_filter, self.systematik_entry)
+        self._set_string_value(brosch_filter.ort_filter, self.ort_entry)
+        
+    filter = property(_get_filter, _set_filter)
+
+    broschs = property(lambda self: self._get_brosch_from_tree_view(self.result_combobox),
+                        lambda self, v: self._set_tree_view(v, self.result_combobox))
+
+    result_stat = property(lambda self: self._get_string_label(self.result_stat_label),
+                            lambda self, v: self._set_string_label(v, self.result_stat_label))
+
+    errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
+                            lambda self, v: self._set_string_label(v, self.errormessage_label))
+    
+    
+@singleton
+class BroschSearchDialogWrapper():
+    
+    @inject
+    def __init__(self, presenter: BroschSearchDialogPresenter):
+        
+        self.presenter = presenter
+        
+    def run(self):
+        
+        dialog = BroschSearchDialog(self.presenter)
+        dialog_end = False
+        
+        while not dialog_end:
+            result = dialog.run()
+            dialog.errormessage = None
+            brosch = None
+            if result == BroschSearchDialog.OK:
+                brosch = dialog.broschs
+                dialog_end = True
+            elif result == BroschSearchDialog.FIND:
+                self.presenter.find_broschs()
+            elif result == BroschSearchDialog.CANCEL:
+                dialog_end = True 
+        dialog.destroy()
+        if brosch is None:
+            return None
+        return brosch.id
