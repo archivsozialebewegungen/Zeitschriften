@@ -66,21 +66,20 @@ class BroschWindow(Gtk.Window):
     
     def previous(self, widget):
         
-        if self.notebook.get_current_page() == 0:
-            self.brosch_page.presenter.fetch_previous()
-        elif self.notebook.get_current_page() == 1:
-            self.group_page.presenter.fetch_previous()
-        elif self.notebook.get_current_page() == 2:
-            self.zeitschriften_page.presenter.fetch_previous()
+        self.fetch_page_presenter().fetch_previous()
             
     def next(self, widget):
         
+        self.fetch_page_presenter().fetch_next()
+            
+    def fetch_page_presenter(self):
+
         if self.notebook.get_current_page() == 0:
-            self.brosch_page.presenter.fetch_next()
-        elif self.notebook.get_current_page() == 1:
-            self.group_page.presenter.fetch_next()
-        elif self.notebook.get_current_page() == 2:
-            self.zeitschriften_page.presenter.fetch_next()
+            return self.brosch_page.presenter
+        if self.notebook.get_current_page() == 1:
+            return self.group_page.presenter
+        if self.notebook.get_current_page() == 2:
+            return self.zeitschriften_page.presenter
             
 if __name__ == '__main__':
 

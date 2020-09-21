@@ -454,22 +454,22 @@ class ZeitschriftenFilterDialogWrapper:
         
         return return_value
 
-class DeletionConfirmationDialog(Gtk.MessageDialog):
+class ConfirmationDialog(Gtk.MessageDialog):
     
-    def __init__(self):
+    def __init__(self, text, title):
         Gtk.MessageDialog.__init__(self,
-                                   title="Löschbestätigung",
+                                   title=title,
                                    message_type=Gtk.MessageType.QUESTION,
                                    buttons=Gtk.ButtonsType.YES_NO,
-                                   text="Willst Du den Datensatz wirklich löschen?"
+                                   text=text
                                    )
 
 @singleton
-class DeletionConfirmationDialogWrapper:
+class ConfirmationDialogWrapper:
     
-    def run(self):
+    def run(self, text="Willst Du den Datensatz wirklich löschen?", title="Löschbestätigung"):
         
-        dialog = DeletionConfirmationDialog()
+        dialog = ConfirmationDialog(text, title)
         
         response = dialog.run()
         
@@ -529,7 +529,7 @@ class JahrgangDialog(Gtk.Dialog, ViewModelMixin):
     SAVE = 2
     DELETE = 3
     
-    def __init__(self, confirm_deletion_dialog: DeletionConfirmationDialogWrapper):
+    def __init__(self, confirm_deletion_dialog: ConfirmationDialogWrapper):
 
         self.confirm_deletion_dialog = confirm_deletion_dialog
         
@@ -633,7 +633,7 @@ class JahrgangEditDialogWrapper:
     
     @inject
     def __init__(self, presenter: JahrgangEditDialogPresenter,
-                 confirm_deletion_dialog: DeletionConfirmationDialogWrapper):
+                 confirm_deletion_dialog: ConfirmationDialogWrapper):
         
         self.presenter = presenter
         self.confirm_deletion_dialog = confirm_deletion_dialog

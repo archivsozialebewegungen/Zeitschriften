@@ -6,7 +6,7 @@ Created on 24.08.2020
 from injector import inject, singleton
 from asb.brosch.broschdaos import NoDataException, DataError,\
     Group, GroupDao, Brosch, BroschDao,\
-    PageObject, BroschFilter, ZeitschriftenDao,\
+    PageObject, ZeitschriftenDao,\
     JahrgaengeDao
 import os
 from sqlalchemy.exc import IntegrityError
@@ -152,6 +152,12 @@ class GenericPresenter():
         if self.viewmodel.confirm_deletion:
             self.dao.delete(self.viewmodel.id)
             self.fetch_first()
+            
+    def edit_new(self):
+        
+        self.reset()
+        self.toggle_editing()
+        self.update_derived_fields()
         
 class BroschPresenter(GenericPresenter):
 
@@ -245,17 +251,19 @@ class GroupPresenter(GenericPresenter):
     def reset(self):
         
         self.viewmodel.id = None
-        self.name = None
-        self.abkuerzung = None
-        self.ort = None
-        self.gruendung_tag = None
-        self.gruendung_monat = None
-        self.gruendung_jahr = None
-        self.aufloesung_tag = None
-        self.aufloesung_monat = None
-        self.aufloesung_jahr = None
-        self.systematik1 = None
-        self.systematik2 = None
+        self.viewmodel.name = None
+        self.viewmodel.abkuerzung = None
+        self.viewmodel.ort = None
+        self.viewmodel.gruendung_tag = None
+        self.viewmodel.gruendung_monat = None
+        self.viewmodel.gruendung_jahr = None
+        self.viewmodel.aufloesung_tag = None
+        self.viewmodel.aufloesung_monat = None
+        self.viewmodel.aufloesung_jahr = None
+        self.viewmodel.systematik1 = None
+        self.viewmodel.systematik2 = None
+
+        self.update_derived_fields()
         
     def update_derived_fields(self):
 
@@ -372,12 +380,6 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.viewmodel.nachfolger_id = None
         self.viewmodel.jahrgaenge = []
         
-    def edit_new(self):
-        
-        self.reset()
-        self.toggle_editing()
-        self.update_derived_fields()
-
     def edit_jahrgang(self):
         
         j = self.viewmodel.edited_jahrgang
