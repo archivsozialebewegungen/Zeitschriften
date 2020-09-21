@@ -14,7 +14,6 @@ from sqlalchemy.sql.functions import count, func
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import IntegrityError
 import os
-from alexandriabase import daos
 
 BROSCH_METADATA = MetaData()
 
