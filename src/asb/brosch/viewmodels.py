@@ -42,7 +42,13 @@ class GenericPage(Gtk.Box, ViewModelMixin):
         
         self.set_error_label()        
 
-        self.add_generic_buttons()        
+        self.add_generic_buttons()  
+        
+        self.additional_button_box = Gtk.ButtonBox.new(Gtk.Orientation.HORIZONTAL)
+        self.additional_button_box.set_layout(Gtk.ButtonBoxStyle.SPREAD)
+        self.additional_button_box.set_border_width(8)
+        self.pack_start(self.additional_button_box, True, True, 0)
+      
         self.add_additional_buttons()
 
         self.presenter.set_viewmodel(self)
@@ -117,6 +123,7 @@ class GenericPage(Gtk.Box, ViewModelMixin):
             self.new_button.set_sensitive(False)
             self.filter_button.set_sensitive(False)
             self.delete_button.set_sensitive(False)
+            self.additional_button_box.set_sensitive(False)
         else:
             self._set_edit_status(False)
             self.edit_button.set_label('Bearbeiten')
@@ -124,6 +131,7 @@ class GenericPage(Gtk.Box, ViewModelMixin):
             self.new_button.set_sensitive(True)
             self.filter_button.set_sensitive(True)
             self.delete_button.set_sensitive(True)
+            self.additional_button_box.set_sensitive(True)
 
     def _get_mode(self):
         
@@ -150,7 +158,9 @@ class GenericPage(Gtk.Box, ViewModelMixin):
     new_filter = property(_get_new_filter)
     
     # Administrative properties
-    mode = property(_get_mode, _set_mode)
+    
+    # lambda is necessary to get the property work in subclasses
+    mode = property(lambda self: self._get_mode(), lambda self, value: self._set_mode(value))
     errormessage = property(_get_errormessage, _set_errormessage)
         
 class BroschPage(GenericPage):
@@ -173,22 +183,18 @@ class BroschPage(GenericPage):
 
     def add_additional_buttons(self):
         
-        button_box = Gtk.ButtonBox.new(Gtk.Orientation.HORIZONTAL)
-        button_box.set_layout(Gtk.ButtonBoxStyle.SPREAD)
-        button_box.set_border_width(8)
-        self.pack_start(button_box, True, True, 0)
 
         self.filter_button = Gtk.Button.new_with_label("Suchen")
         self.filter_button.connect("clicked", lambda button: self.presenter.search_brosch())
-        button_box.pack_start(self.filter_button, True, True, 0)
+        self.additional_button_box.pack_start(self.filter_button, True, True, 0)
 
         self.group_button = Gtk.Button.new_with_label("Gruppe ändern")
         self.group_button.connect('clicked', lambda button: self.presenter.change_group())
-        button_box.pack_start(self.group_button, True, True, 0)
+        self.additional_button_box.pack_start(self.group_button, True, True, 0)
         
         self.file_button = Gtk.Button.new_with_label("Datei ändern")
         self.file_button.connect('clicked', lambda button: self.presenter.change_file())
-        button_box.pack_start(self.file_button, True, True, 0)
+        self.additional_button_box.pack_start(self.file_button, True, True, 0)
 
     def set_invisible_properties(self):
         
@@ -358,14 +364,6 @@ class BroschPage(GenericPage):
     def _get_search_id(self):
         
         return self.search_dialog.run()
-
-    def _set_mode(self, mode): 
-
-        super()._set_mode(mode)        
-        if mode == self.presenter.EDIT_MODE:         
-            self.group_button.set_sensitive(False)
-        else:
-            self.group_button.set_sensitive(True)
 
     exemplare = property(lambda self: self._get_int_value(self.exemplare_entry, 'Anzahl'),
                          lambda self, v: self._set_int_value(v, self.exemplare_entry))
@@ -701,48 +699,37 @@ class ZeitschriftenPage(GenericPage):
 
     def add_additional_buttons(self):
             
-        button_box = Gtk.ButtonBox.new(Gtk.Orientation.HORIZONTAL)
-        button_box.set_layout(Gtk.ButtonBoxStyle.SPREAD)
-        button_box.set_border_width(8)
-        self.pack_start(button_box, True, True, 0)
-
         self.group_button = Gtk.Button.new_with_label("Gruppe\nändern")
         self.group_button.connect('clicked', lambda button: self.presenter.change_group())
-        button_box.pack_start(self.group_button, True, True, 0)
+        self.additional_button_box.pack_start(self.group_button, True, True, 0)
         
         self.file_button = Gtk.Button.new_with_label("Verzeichnis\nändern")
         self.file_button.connect('clicked', lambda button: self.presenter.change_directory())
-        button_box.pack_start(self.file_button, True, True, 0)
+        self.additional_button_box.pack_start(self.file_button, True, True, 0)
 
         self.file_button = Gtk.Button.new_with_label("Verzeichnis\nlöschen")
         self.file_button.connect('clicked', lambda button: self.presenter.delete_directory())
-        button_box.pack_start(self.file_button, True, True, 0)
+        self.additional_button_box.pack_start(self.file_button, True, True, 0)
 
         self.jedit_button = Gtk.Button.new_with_label("Jahrgang\nbearbeiten")
         self.jedit_button.connect("clicked", lambda button: self.presenter.edit_jahrgang())
-        button_box.pack_start(self.jedit_button, True, True, 0)
+        self.additional_button_box.pack_start(self.jedit_button, True, True, 0)
 
         self.jnew_button = Gtk.Button.new_with_label("Jahrgang\nanlegen")
         self.jnew_button.connect("clicked", lambda button: self.presenter.new_jahrgang())
-        button_box.pack_start(self.jnew_button, True, True, 0)
-
-    def _set_mode(self, mode): 
-        
-        super()._set_mode(mode)
-        if mode == GenericPresenter.EDIT_MODE:         
-            self.jedit_button.set_sensitive(False)
-            self.jnew_button.set_sensitive(False)
-            self.group_button.set_sensitive(False)
-        else:
-            self.jedit_button.set_sensitive(True)
-            self.jnew_button.set_sensitive(True)
-            self.group_button.set_sensitive(True)
+        self.additional_button_box.pack_start(self.jnew_button, True, True, 0)
 
     def _get_edited_jahrgang(self):
+        
+        if self.jahrgaenge is None:
+            return
         
         return self.jahrgang_edit_dialog.run(jahrgang_id=self.jahrgaenge)
     
     def _get_new_jahrgang(self):
+        
+        if self.id is None:
+            return
         
         return self.jahrgang_edit_dialog.run(zid=self.id)
 
