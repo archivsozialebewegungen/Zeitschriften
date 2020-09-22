@@ -296,117 +296,135 @@ class Jahrgang:
         else:
             return "Jahr unbekannt"
 
-class GenericFilter:
-
-    COMBINATION_AND = 'and'
-    COMBINATION_OR = 'or'
-
-    def __init__(self):
+class TextFilterProperty:
+    
+    def __init__(self, columns, label, exact=False):
         
-        self._title_contains = None
-        self._systematik = None
-        self._ort = None
-        self._expression_cache = True
-        self._combination = self.COMBINATION_AND
-        self.systematic_columns = []
-
-    def _get_filter_expression(self):
+        self.label = label
+        self.columns = columns
+        self.exact = exact
         
-        if self._expression_cache is not None:
-            return self._expression_cache
+    def build_subexpression(self, value):
         
-        sub_expressions = self._get_subexpressions()
+        if value is None:
+            return None
         
-        if len(sub_expressions) == 0:
-            self._expression_cache = True
+        if self.exact:
+            return self.build_exact_subexpression(value)
         else:
-            if self._combination == self.COMBINATION_AND:
-                self._expression_cache = and_(*sub_expressions)
-            else:
-                self._expression_cache = or_(*sub_expressions)
+            return self.build_contains_subexpression(value)
         
-        return self._expression_cache
+    def build_contains_subexpression(self, value):
         
-    def _get_subexpressions(self):
-        
-        expressions = []
-        
-        title_expression = self._get_title_expression()
-        if title_expression is not None:
-            expressions.append(title_expression)
-        ort_expression = self._get_ort_expression()
-        if ort_expression is not None:
-            expressions.append(ort_expression)
-        systematik_expression = self._get_systematik_expression()
-        if systematik_expression is not None:
-            expressions.append(systematik_expression)
-            
-        return expressions
-    
-    def _get_title_expression(self):
-        
-        if self._title_contains is None:
-            return None
-        
-        return or_(
-                    self.table.c.titel.ilike('%%%s%%' % self._title_contains),
-                    self.table.c.untertitel.ilike('%%%s%%' % self._title_contains)
-        )
-        
-    def _get_ort_expression(self):
-        
-        if self._ort is None:
-            return None
-        
-        return self.table.c.ort.ilike('%%%s%%' % self._ort)
+        column_expressions = []
+        for column in self.columns:
+            column_expressions.append(column.ilike('%%%s%%' % value))
+        return or_(*column_expressions)
 
-    def _get_systematik_expression(self):
+    def build_exact_subexpression(self, value):
         
-        raise Exception("Implement in child class.")
+        column_expressions = []
+        for column in self.columns:
+            column_expressions.append(column == value)
+        return or_(*column_expressions)
+
+class SystematikFilterProperty:
+
+    def __init__(self, columns):
+        
+        self.label = "Systematik"
+        self.columns = columns
     
-    def _get_systematik_expressions(self, columns):
+    def build_subexpression(self, value):
         
-        if self._systematik is None:
+        if value is None:
+            return True
+        
+        return or_(*self._get_systematik_expressions(value))
+
+    def _get_systematik_expressions(self, value):
+        
+        if value is None:
             return []
         
         expressions = []
-        for column in columns:
+        for column in self.columns:
             expressions.append(
                 or_(
                     column == self._systematik,
                     column.ilike('%s.%%' % self._systematik))
             )
         return expressions
-        
-    def _set_title_filter(self, title_contains: str):
-        
-        self._title_contains = title_contains
-        self._expression_cache = None
-        
-    def _get_title_filter(self):
-        
-        return self._title_contains
     
-    def _set_systematik_filter(self, systematik: str):
+class BroschSystematikFilterProperty(SystematikFilterProperty):
+
+    def __init__(self):
         
-        if systematik is not None and systematik[-1] == '.':
-            self._systematik = systematik[0:-1]
+        super().__init__([BROSCH_TABLE.c.systematik1, BROSCH_TABLE.c.systematik2])
+
+    def build_subexpression(self, value):
+
+        if value is None:
+            return True
+        
+        expressions = self._get_systematik_expressions(value)
+        try:
+            int(self._systematik)
+            expressions.append(BROSCH_TABLE.c.hauptsystematik == value)
+        except ValueError:
+            pass
+        except TypeError:
+            pass
+        
+        return or_(*expressions)
+
+class GenericFilter:
+
+    COMBINATION_AND = 'and'
+    COMBINATION_OR = 'or'
+
+    def __init__(self, properties):
+        
+        self._expression_cache = None
+        self._combination = GenericFilter.COMBINATION_AND
+        
+        self.properties = properties
+        self.property_values = {}
+        for filter_property in self.properties:
+            if filter_property.label in self.property_values:
+                raise Exception("Duplicate property label")
+            self.property_values[filter_property.label] = None
+
+    def get_property_value(self, property_label):
+        
+        return self.property_values[property_label]
+    
+    def set_property_value(self, property_label, value):
+        
+        self.property_values[property_label] = value
+        self._expression_cache = None
+
+    def _get_filter_expression(self):
+        
+        if self._expression_cache is not None:
+            return self._expression_cache
+        
+        subexpressions = []
+        for filter_property in self.properties:
+            expression = filter_property.build_subexpression(self.property_values[filter_property.label])
+            if expression is not None:
+                subexpressions.append(expression)
+        if len(subexpressions) == 0:
+            self._expression_cache = True
+        elif len(subexpressions) == 1:
+            self._expression_cache = subexpressions[0]
         else:
-            self._systematik = systematik
-        self._expression_cache = None
+            if self.combination == self.COMBINATION_AND:
+                self._expression_cache = and_(*subexpressions)
+            else:
+                self._expression_cache = or_(*subexpressions)
         
-    def _get_systematik_filter(self):
-        
-        return self._systematik
-    
-    def _set_ort_filter(self, ort: str):
-        
-        self._ort = ort
-        self._expression_cache = None
-        
-    def _get_ort_filter(self):
-        
-        return self._ort
+        return self._expression_cache
     
     def _set_combination(self, combination: str):
         
@@ -417,16 +435,19 @@ class GenericFilter:
         
         return self._combination
     
-    def reset(self):
+    def _get_labels(self):
         
-        self._title_contains = None
-        self._expression_cache = None
+        return self.property_values.keys()
+    
+    def reset(self):
 
+        for filter_property in self.properties:
+            self.property_values[filter_property.label] = None
+        self._expression_cache = None
+                
     filter_expression = property(_get_filter_expression)
-    titel_filter = property(_get_title_filter, _set_title_filter)
-    systematik_filter = property(_get_systematik_filter, _set_systematik_filter)
-    ort_filter = property(_get_ort_filter, _set_ort_filter)
     combination = property(_get_combination, _set_combination)
+    labels = property(_get_labels)
             
 class BroschFilter(GenericFilter):
     
@@ -437,9 +458,10 @@ class BroschFilter(GenericFilter):
     
     def __init__(self):
 
-        super().__init__()        
+        super().__init__([TextFilterProperty([BROSCH_TABLE.c.titel, BROSCH_TABLE.c.untertitel], "Titel"),
+                          TextFilterProperty([BROSCH_TABLE.c.ort], "Ort"),
+                          BroschSystematikFilterProperty()])        
         self._sort_order = self.TITEL_ORDER
-        self.table = BROSCH_TABLE
     
     def _get_sort_order(self):
         
@@ -464,19 +486,6 @@ class BroschFilter(GenericFilter):
         if not order in self.SORT_ORDERS:
             raise Exception('Sort order %s is not defined!' % order)
         self._sort_order = order
-
-    def _get_systematik_expression(self):
-        
-        expressions = self._get_systematik_expressions([BROSCH_TABLE.c.systematik1, BROSCH_TABLE.c.systematik2])
-        try:
-            int(self._systematik)
-            expressions.append(BROSCH_TABLE.c.hauptsystematik == self._systematik)
-        except ValueError:
-            pass
-        except TypeError:
-            pass
-        
-        return or_(*expressions)
 
     
     def get_previous_expression(self, brosch):
@@ -527,11 +536,13 @@ class BroschFilter(GenericFilter):
     sort_order_asc = property(_get_order_by_asc) 
     sort_order_desc = property(_get_order_by_desc)
 
-class GruppenFilter:
+class GruppenFilter(GenericFilter):
     
     def __init__(self):
-        
-        self.filter_expression = True
+
+        super().__init__([TextFilterProperty([GROUP_TABLE.c.name], "Name"),
+                          TextFilterProperty([GROUP_TABLE.c.ort], "Ort"),
+                          SystematikFilterProperty([GROUP_TABLE.c.systematik1, GROUP_TABLE.c.systematik2])])        
         self.sort_order_asc = [GROUP_TABLE.c.name.asc()]
         self.sort_order_desc = [GROUP_TABLE.c.name.desc()]
         
@@ -543,10 +554,11 @@ class GruppenFilter:
         
         return GROUP_TABLE.c.name < gruppe.name
 
-class JahrgaengeFilter:
+class JahrgaengeFilter(GenericFilter):
     
     def __init__(self):
         
+        super().__init__([])        
         self.sort_order_asc = [JAHRGANG_TABLE.c.zid.asc(), JAHRGANG_TABLE.c.jahr.asc()]
         self.sort_order_desc = [JAHRGANG_TABLE.c.zid.desc(), JAHRGANG_TABLE.c.jahr.desc()]
         
@@ -568,23 +580,19 @@ class ZeitschriftenFilter(GenericFilter):
     
     def __init__(self):
         
-        super().__init__()
-        self.table = ZEITSCH_TABLE     
-        self.sort_order_asc = [self.table.c.titel.asc()]
-        self.sort_order_desc = [self.table.c.titel.desc()]
+        super().__init__([TextFilterProperty([ZEITSCH_TABLE.c.titel, ZEITSCH_TABLE.c.untertitel], "Titel"),
+                          TextFilterProperty([ZEITSCH_TABLE.c.ort], "Ort"),
+                          BroschSystematikFilterProperty()])        
+        self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc()]
+        self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc()]
         
     def get_next_expression(self, zeitschrift):
         
-        return self.table.c.titel > zeitschrift.titel
+        return ZEITSCH_TABLE.c.titel > zeitschrift.titel
     
     def get_previous_expression(self, zeitschrift):
         
-        return self.table.c.titel < zeitschrift.titel
-    
-    def _get_systematik_expression(self):
-        
-        expressions = self._get_systematik_expressions([self.table.c.systematik1, self.table.c.systematik2, self.table.c.systematik3])
-        return or_(*expressions)
+        return ZEITSCH_TABLE.c.titel < zeitschrift.titel
     
 class PageObject:
     

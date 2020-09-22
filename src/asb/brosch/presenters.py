@@ -62,6 +62,13 @@ class ZeitschriftenFilterDialogPresenter(GenericFilterDialogPresenter):
         
         self.dao = zeitschriften_dao
     
+class GroupFilterDialogPresenter(GenericFilterDialogPresenter):
+    
+    @inject
+    def __init__(self, group_dao: GroupDao):
+        
+        self.dao = group_dao
+
 class GenericPresenter():
 
     VIEW_MODE = 0

@@ -8,11 +8,11 @@ from asb.brosch.mixins import ViewModelMixin
 from injector import inject, singleton
 from asb.brosch.presenters import GroupSelectionPresenter,\
     BroschFilterDialogPresenter, JahrgangEditDialogPresenter,\
-    ZeitschriftenFilterDialogPresenter, BroschSearchDialogPresenter
+    ZeitschriftenFilterDialogPresenter, BroschSearchDialogPresenter,\
+    GroupFilterDialogPresenter
 from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter,\
-    ZeitschriftenFilter, Brosch
+    ZeitschriftenFilter, GruppenFilter
 import os
-from os.path import isdir
 
 class GroupSelectionDialog(Gtk.Dialog, ViewModelMixin):
     
@@ -164,22 +164,22 @@ class BroschInitDialogWrapper:
                     dialog.errormessage = e.message
         dialog.destroy()
         return return_value
-    
-class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
-    
+
+class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
+
     CANCEL = 1
     APPLY = 2
     CLEAR = 3
     
-    def __init__(self, brosch_filter):
+    def __init__(self, record_filter, title):
 
-        Gtk.Dialog.__init__(self, title="Broschürenfilter", flags=0)
+        Gtk.Dialog.__init__(self, title=title, flags=0)
         self.add_buttons(
-            Gtk.STOCK_CANCEL, BroschFilterDialog.CANCEL,
-            Gtk.STOCK_APPLY, BroschFilterDialog.APPLY,
-            Gtk.STOCK_CLEAR, BroschFilterDialog.CLEAR
+            Gtk.STOCK_CANCEL, GenericFilterDialog.CANCEL,
+            Gtk.STOCK_APPLY, GenericFilterDialog.APPLY,
+            Gtk.STOCK_CLEAR, GenericFilterDialog.CLEAR
         )
-        self.set_default_response(BroschFilterDialog.APPLY)
+        self.set_default_response(GenericFilterDialog.APPLY)
 
         self.set_default_size(150, 100)
 
@@ -188,15 +188,91 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
         main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
         box.add(main_box)
 
-        self._init_sorting(main_box)
-        self._init_filter(main_box)
-        self._init_combining(main_box)
+        self._init_content_area(main_box, record_filter)
         
         self.errormessage_label = Gtk.Label()
         main_box.add(self.errormessage_label)
-        self._update_widgets(brosch_filter)
+        self._update_widgets(record_filter)
         
         self.show_all()
+
+    def _init_content_area(self, main_box, record_filter):
+        
+        self._init_default_text_filters(main_box, record_filter)
+        self._init_combining(main_box)
+        
+    def _update_widgets(self, record_filter):
+        
+        for label in record_filter.labels:
+            value = record_filter.get_property_value(label)
+            if value is None:
+                self.entries[label].set_text('')
+            else:
+                self.entries[label].set_text(value)
+        if record_filter.combination == BroschFilter.COMBINATION_AND:
+            self.and_checkbutton.set_active(True)
+        else:
+            self.or_checkbutton.set_active(True)
+            
+        self._set_string_label('', self.errormessage_label)
+
+    def _init_combining(self, box):
+        
+        combinebox = Gtk.Box(spacing=6)
+        box.add(combinebox)
+
+        combinebox.add(Gtk.Label(halign=Gtk.Align.START, label='Verknüpfung'))
+
+        self.and_checkbutton = Gtk.RadioButton.new_with_label_from_widget(None, "alle Bedingungen")
+        combinebox.pack_start(self.and_checkbutton, False, False, 0)
+
+        self.or_checkbutton = Gtk.RadioButton.new_from_widget(self.and_checkbutton)
+        self.or_checkbutton.set_label("irgendeine Bedingung")
+        combinebox.pack_start(self.or_checkbutton, False, False, 0)
+        
+    def _init_default_text_filters(self, box, record_filter):
+        
+        entry_grid = Gtk.Grid.new()
+        box.add(entry_grid)
+        
+        entry_grid.set_border_width(5)
+        entry_grid.set_row_spacing(5)
+        entry_grid.set_column_spacing(5)
+        
+        current_row = 0
+        
+        self.entries= {}
+        for label in record_filter.labels:
+            entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label=label), 1, current_row, 1, 1)
+            self.entries[label] = Gtk.Entry(width_chars=40)
+            entry_grid.attach(self.entries[label], 2, current_row, 1, 1)
+            current_row += 1
+
+    def _get_combination(self):
+        
+        if self.and_checkbutton.get_active():
+            return BroschFilter.COMBINATION_AND
+        else:
+            return BroschFilter.COMBINATION_OR
+        
+    def update_record_filter(self, record_filter):
+        
+        for label in record_filter.labels:
+            if self.entries[label].get_text() == '':
+                record_filter.set_property_value(label, None)
+            else:
+                record_filter.set_property_value(label, self.entries[label].get_text())
+        return record_filter
+
+    errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
+                            lambda self, v: self._set_string_label(v, self.errormessage_label))
+        
+class BroschFilterDialog(GenericFilterDialog):
+
+    def _init_content_area(self, main_box, record_filter):
+        
+        self._init_sorting(main_box)
+        super()._init_content_area(main_box, record_filter)
 
     def _init_sorting(self, box):
         
@@ -212,57 +288,14 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
         self.signature_checkbutton.set_label("nach Signatur")
         sortbox.pack_start(self.signature_checkbutton, False, False, 0)
                 
-    def _init_combining(self, box):
-        
-        combinebox = Gtk.Box(spacing=6)
-        box.add(combinebox)
-
-        combinebox.add(Gtk.Label(halign=Gtk.Align.START, label='Verknüpfung'))
-
-        self.and_checkbutton = Gtk.RadioButton.new_with_label_from_widget(None, "alle Bedingungen")
-        combinebox.pack_start(self.and_checkbutton, False, False, 0)
-
-        self.or_checkbutton = Gtk.RadioButton.new_from_widget(self.and_checkbutton)
-        self.or_checkbutton.set_label("irgendeine Bedingung")
-        combinebox.pack_start(self.or_checkbutton, False, False, 0)
-        
-    def _init_filter(self, box):
-        
-        
-        entry_grid = Gtk.Grid.new()
-        box.add(entry_grid)
-        
-        entry_grid.set_border_width(5)
-        entry_grid.set_row_spacing(5)
-        entry_grid.set_column_spacing(5)
-        
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Titel enthält:'), 1, 0, 1, 1)
-        self.titel_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.titel_entry, 2, 0, 1, 1)
-
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik:'), 1, 1, 1, 1)
-        self.systematik_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.systematik_entry, 2, 1, 1, 1)
-
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Ort:'), 1, 2, 1, 1)
-        self.ort_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.ort_entry, 2, 2, 1, 1)
              
     def _update_widgets(self, brosch_filter):
-        
+
+        super()._update_widgets(brosch_filter)        
         if brosch_filter.sort_order == BroschFilter.SIGNATUR_ORDER:
             self.signature_checkbutton.set_active(True)
         else:
             self.title_checkbutton.set_active(True)
-        self._set_string_value(brosch_filter.titel_filter, self.titel_entry)
-        self._set_string_value(brosch_filter.systematik_filter, self.systematik_entry)
-        self._set_string_value(brosch_filter.ort_filter, self.ort_entry)
-        if brosch_filter.combination == BroschFilter.COMBINATION_AND:
-            self.and_checkbutton.set_active(True)
-        else:
-            self.or_checkbutton.set_active(True)
-            
-        self._set_string_label('', self.errormessage_label)
 
     def _get_sort_order(self):
         if self.signature_checkbutton.get_active():
@@ -270,32 +303,14 @@ class BroschFilterDialog(Gtk.Dialog, ViewModelMixin):
         else:
             return BroschFilter.TITEL_ORDER
         
-    def _get_combination(self):
-        
-        if self.and_checkbutton.get_active():
-            return BroschFilter.COMBINATION_AND
-        else:
-            return BroschFilter.COMBINATION_OR
-
-    titel_filter = property(lambda self: self._get_string_value(self.titel_entry))
-    systematik_filter = property(lambda self: self._get_string_value(self.systematik_entry))
-    ort_filter = property(lambda self: self._get_string_value(self.ort_entry))
     sort_order = property(_get_sort_order)
-    combination = property(_get_combination)
-    errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
-                            lambda self, v: self._set_string_label(v, self.errormessage_label))
 
-@singleton
-class BroschFilterDialogWrapper:
-    
-    @inject
-    def __init__(self, presenter: BroschFilterDialogPresenter):
-        
-        self.presenter = presenter
-    
+
+class GenericFilterDialogWrapper():
+
     def run(self):
         
-        dialog = BroschFilterDialog(self.presenter.get_current_filter())
+        dialog = self.dialogclass(self.presenter.get_current_filter(), self.title)
 
         response_ok = False        
         while not response_ok:
@@ -305,12 +320,7 @@ class BroschFilterDialogWrapper:
             if response == BroschFilterDialog.CANCEL:
                 response_ok = True
             elif response == BroschFilterDialog.APPLY:
-                return_value = BroschFilter()
-                return_value.titel_filter = dialog.titel_filter
-                return_value.systematik_filter = dialog.systematik_filter
-                return_value.ort_filter = dialog.ort_filter
-                return_value.combination = dialog.combination
-                return_value.sort_order = dialog.sort_order
+                return_value = self.build_filter_object(dialog)
                 if self.presenter.does_filter_return_results(return_value):
                     response_ok = True
                 else:
@@ -323,136 +333,49 @@ class BroschFilterDialogWrapper:
         
         return return_value
 
-class ZeitschriftenFilterDialog(Gtk.Dialog, ViewModelMixin):
-    
-    CANCEL = 1
-    APPLY = 2
-    CLEAR = 3
-    
-    def __init__(self, z_filter):
+    def build_filter_object(self, dialog):
 
-        Gtk.Dialog.__init__(self, title="Zeitschriftenfilter", flags=0)
-        self.add_buttons(
-            Gtk.STOCK_CANCEL, BroschFilterDialog.CANCEL,
-            Gtk.STOCK_APPLY, BroschFilterDialog.APPLY,
-            Gtk.STOCK_CLEAR, BroschFilterDialog.CLEAR
-        )
-        self.set_default_response(BroschFilterDialog.APPLY)
-
-        self.set_default_size(150, 100)
-
-        box = self.get_content_area()
-
-        main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
-        box.add(main_box)
-
-        self._init_filter(main_box)
-        self._init_combining(main_box)
-        
-        self.errormessage_label = Gtk.Label()
-        main_box.add(self.errormessage_label)
-        self._update_widgets(z_filter)
-        
-        self.show_all()
-
-    def _init_combining(self, box):
-        
-        combinebox = Gtk.Box(spacing=6)
-        box.add(combinebox)
-
-        combinebox.add(Gtk.Label(halign=Gtk.Align.START, label='Verknüpfung'))
-
-        self.and_checkbutton = Gtk.RadioButton.new_with_label_from_widget(None, "alle Bedingungen")
-        combinebox.pack_start(self.and_checkbutton, False, False, 0)
-
-        self.or_checkbutton = Gtk.RadioButton.new_from_widget(self.and_checkbutton)
-        self.or_checkbutton.set_label("irgendeine Bedingung")
-        combinebox.pack_start(self.or_checkbutton, False, False, 0)
-        
-    def _init_filter(self, box):
-        
-        
-        entry_grid = Gtk.Grid.new()
-        box.add(entry_grid)
-        
-        entry_grid.set_border_width(5)
-        entry_grid.set_row_spacing(5)
-        entry_grid.set_column_spacing(5)
-        
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Titel enthält:'), 1, 0, 1, 1)
-        self.titel_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.titel_entry, 2, 0, 1, 1)
-
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik:'), 1, 1, 1, 1)
-        self.systematik_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.systematik_entry, 2, 1, 1, 1)
-
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Ort:'), 1, 2, 1, 1)
-        self.ort_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.ort_entry, 2, 2, 1, 1)
-             
-    def _update_widgets(self, z_filter):
-        
-        self._set_string_value(z_filter.titel_filter, self.titel_entry)
-        self._set_string_value(z_filter.systematik_filter, self.systematik_entry)
-        self._set_string_value(z_filter.ort_filter, self.ort_entry)
-        if z_filter.combination == ZeitschriftenFilter.COMBINATION_AND:
-            self.and_checkbutton.set_active(True)
-        else:
-            self.or_checkbutton.set_active(True)
-            
-        self._set_string_label('', self.errormessage_label)
-
-    def _get_combination(self):
-        
-        if self.and_checkbutton.get_active():
-            return BroschFilter.COMBINATION_AND
-        else:
-            return BroschFilter.COMBINATION_OR
-
-    titel_filter = property(lambda self: self._get_string_value(self.titel_entry))
-    systematik_filter = property(lambda self: self._get_string_value(self.systematik_entry))
-    ort_filter = property(lambda self: self._get_string_value(self.ort_entry))
-    combination = property(_get_combination)
-    errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
-                            lambda self, v: self._set_string_label(v, self.errormessage_label))
+        record_filter = self.filterclass()
+        return dialog.update_record_filter(record_filter)
 
 @singleton
-class ZeitschriftenFilterDialogWrapper:
+class BroschFilterDialogWrapper(GenericFilterDialogWrapper):
+    
+    @inject
+    def __init__(self, presenter: BroschFilterDialogPresenter):
+        
+        self.presenter = presenter
+        self.title = "Broschürenfilter"
+        self.dialogclass = BroschFilterDialog
+        self.filterclass = BroschFilter
+
+    def build_filter_object(self, dialog):
+
+        record_filter = super().build_filter_object(dialog)        
+        record_filter.sort_order = dialog.sort_order
+        return record_filter
+
+@singleton
+class ZeitschriftenFilterDialogWrapper(GenericFilterDialogWrapper):
     
     @inject
     def __init__(self, presenter: ZeitschriftenFilterDialogPresenter):
         
         self.presenter = presenter
-    
-    def run(self):
-        
-        dialog = ZeitschriftenFilterDialog(self.presenter.get_current_filter())
+        self.title = "Zeitschriftenfilter"
+        self.dialogclass = GenericFilterDialog
+        self.filterclass = ZeitschriftenFilter
 
-        response_ok = False        
-        while not response_ok:
-            return_value = None
-            response = dialog.run()
-            dialog.errormessage = ''
-            if response == ZeitschriftenFilterDialog.CANCEL:
-                response_ok = True
-            elif response == ZeitschriftenFilterDialog.APPLY:
-                return_value = ZeitschriftenFilter()
-                return_value.titel_filter = dialog.titel_filter
-                return_value.systematik_filter = dialog.systematik_filter
-                return_value.ort_filter = dialog.ort_filter
-                return_value.combination = dialog.combination
-                if self.presenter.does_filter_return_results(return_value):
-                    response_ok = True
-                else:
-                    dialog.errormessage = "Filter liefert keine Daten zurück!"
-            elif response == ZeitschriftenFilterDialog.CLEAR:
-                return_value = ZeitschriftenFilter
-                response_ok = True
-                
-        dialog.destroy()
+@singleton
+class GroupFilterDialogWrapper(GenericFilterDialogWrapper):
+    
+    @inject
+    def __init__(self, presenter: GroupFilterDialogPresenter):
         
-        return return_value
+        self.presenter = presenter
+        self.title = "Gruppenfilter"
+        self.dialogclass = GenericFilterDialog
+        self.filterclass = GruppenFilter
 
 class ConfirmationDialog(Gtk.MessageDialog):
     

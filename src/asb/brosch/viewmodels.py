@@ -13,7 +13,8 @@ from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     BroschInitDialogWrapper, BroschFilterDialogWrapper,\
     ConfirmationDialogWrapper, BroschFileChooserDialogWrapper,\
     JahrgangEditDialogWrapper, ZeitschriftenFilterDialogWrapper,\
-    ZeitschDirectoryChooserDialogWrapper, BroschSearchDialogWrapper
+    ZeitschDirectoryChooserDialogWrapper, BroschSearchDialogWrapper,\
+    GroupFilterDialogWrapper
 
 WIDTH_11 = 55
 WIDTH_5 = 20
@@ -23,12 +24,13 @@ WIDTH_1 = 5
 
 class GenericPage(Gtk.Box, ViewModelMixin):
     
-    def __init__(self, presenter, confirmation_dialog):
+    def __init__(self, presenter, confirmation_dialog, filter_dialog):
         
         super().__init__()
 
         self.presenter = presenter
         self.confirmation_dialog = confirmation_dialog
+        self.filter_dialog = filter_dialog
 
         self.set_invisible_properties()
 
@@ -139,9 +141,14 @@ class GenericPage(Gtk.Box, ViewModelMixin):
         
         return self.confirmation_dialog.run()
 
+    def _get_new_filter(self):
+
+        return self.filter_dialog.run()        
+
     # Dialog properties
     confirm_deletion = property(_get_confirm_deletion)
-        
+    new_filter = property(_get_new_filter)
+    
     # Administrative properties
     mode = property(_get_mode, _set_mode)
     errormessage = property(_get_errormessage, _set_errormessage)
@@ -153,17 +160,16 @@ class BroschPage(GenericPage):
                  confirmation_dialog: ConfirmationDialogWrapper,
                  group_selection_dialog: GroupSelectionDialogWrapper,
                  brosch_init_dialog: BroschInitDialogWrapper,
-                 brosch_filter_dialog: BroschFilterDialogWrapper,
+                 filter_dialog: BroschFilterDialogWrapper,
                  file_selection_dialog: BroschFileChooserDialogWrapper,
                  search_dialog: BroschSearchDialogWrapper):
 
         self.group_selection_dialog = group_selection_dialog
         self.brosch_init_dialog = brosch_init_dialog
-        self.brosch_filter_dialog = brosch_filter_dialog
         self.file_selection_dialog = file_selection_dialog
         self.search_dialog = search_dialog
         
-        super().__init__(presenter, confirmation_dialog)
+        super().__init__(presenter, confirmation_dialog, filter_dialog)
 
     def add_additional_buttons(self):
         
@@ -341,10 +347,6 @@ class BroschPage(GenericPage):
         
         return self.group_selection_dialog.run()
     
-    def _get_new_filter(self):
-
-        return self.brosch_filter_dialog.run()        
-
     def _get_init_values(self):
         
         return self.brosch_init_dialog.run()
@@ -443,7 +445,6 @@ class BroschPage(GenericPage):
 
     # Dialog properties
     new_group = property(_get_new_group)
-    new_filter = property(_get_new_filter)
     new_file = property(_get_file)
     init_values = property(_get_init_values)
     search_id = property(_get_search_id)
@@ -452,12 +453,11 @@ class GroupPage(GenericPage):
     
     @inject
     def __init__(self, presenter: GroupPresenter,
-                 confirmation_dialog: ConfirmationDialogWrapper
+                 confirmation_dialog: ConfirmationDialogWrapper,
+                 filter_dialog: GroupFilterDialogWrapper
                  ):
 
-        super().__init__(presenter, confirmation_dialog)
-
-        self.presenter.set_viewmodel(self)
+        super().__init__(presenter, confirmation_dialog, filter_dialog)
 
     def set_invisible_properties(self):
         
@@ -558,10 +558,9 @@ class ZeitschriftenPage(GenericPage):
 
         self.jahrgang_edit_dialog = jahrgang_edit_dialog
         self.group_selection_dialog = group_selection_dialog
-        self.filter_dialog = filter_dialog
         self.directory_dialog = directory_dialog
         
-        super().__init__(presenter, confirmation_dialog)
+        super().__init__(presenter, confirmation_dialog, filter_dialog)
     
     def add_additional_widgets(self):
         
@@ -747,10 +746,6 @@ class ZeitschriftenPage(GenericPage):
         
         return self.group_selection_dialog.run()
     
-    def _get_new_filter(self):
-
-        return self.filter_dialog.run()
-
     def _get_confirm_deletion(self):
         
         return self.confirm_deletion_dialog.run()
@@ -824,5 +819,4 @@ class ZeitschriftenPage(GenericPage):
     edited_jahrgang = property(_get_edited_jahrgang)
     new_jahrgang = property(_get_new_jahrgang)
     new_group = property(_get_new_group)
-    new_filter = property(_get_new_filter)
     new_directory = property(_get_new_directory)
