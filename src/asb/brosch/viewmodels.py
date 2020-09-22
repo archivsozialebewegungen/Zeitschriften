@@ -706,12 +706,16 @@ class ZeitschriftenPage(GenericPage):
         button_box.set_border_width(8)
         self.pack_start(button_box, True, True, 0)
 
-        self.group_button = Gtk.Button.new_with_label("Gruppe ändern")
+        self.group_button = Gtk.Button.new_with_label("Gruppe\nändern")
         self.group_button.connect('clicked', lambda button: self.presenter.change_group())
         button_box.pack_start(self.group_button, True, True, 0)
         
-        self.file_button = Gtk.Button.new_with_label("Verzeichnis ändern")
+        self.file_button = Gtk.Button.new_with_label("Verzeichnis\nändern")
         self.file_button.connect('clicked', lambda button: self.presenter.change_directory())
+        button_box.pack_start(self.file_button, True, True, 0)
+
+        self.file_button = Gtk.Button.new_with_label("Verzeichnis\nlöschen")
+        self.file_button.connect('clicked', lambda button: self.presenter.delete_directory())
         button_box.pack_start(self.file_button, True, True, 0)
 
         self.jedit_button = Gtk.Button.new_with_label("Jahrgang\nbearbeiten")
@@ -746,13 +750,13 @@ class ZeitschriftenPage(GenericPage):
         
         return self.group_selection_dialog.run()
     
-    def _get_confirm_deletion(self):
-        
-        return self.confirm_deletion_dialog.run()
-    
     def _get_new_directory(self):
         
         return self.directory_dialog.run()
+    
+    def _get_confirm_directory_deletion(self):
+        
+        return self.confirmation_dialog.run(text="Willst Du das Verzeichnis wirklich löschen?")
             
     titel = property(lambda self: self._get_string_value(self.titel_entry),
                     lambda self, v: self._set_string_value(v, self.titel_entry))
@@ -820,3 +824,4 @@ class ZeitschriftenPage(GenericPage):
     new_jahrgang = property(_get_new_jahrgang)
     new_group = property(_get_new_group)
     new_directory = property(_get_new_directory)
+    confirm_directory_deletion = property(_get_confirm_directory_deletion)
