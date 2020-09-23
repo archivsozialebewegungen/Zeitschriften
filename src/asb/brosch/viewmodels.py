@@ -514,33 +514,61 @@ class GroupPage(GenericPage):
         self.parentgroup_label = Gtk.Label(halign=Gtk.Align.START, label='', width_chars=WIDTH_11)
         self.grid2.attach(self.parentgroup_label, 2, 4, 11, 1)
 
+        self.subgroups_goto_button = Gtk.Button.new_with_label("Gehe zu\nObergruppe")
+        self.subgroups_goto_button.connect("clicked", lambda button: self.presenter.goto_parentgroup())
+        self.grid2.attach(self.subgroups_goto_button, 2, 5, 3, 1)
+        
         # Untergruppen
         
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Untergruppen:'), 1, 5, 1, 1)
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Untergruppen:'), 1, 6, 1, 1)
         self.subgroups_combobox = self._create_combobox()
-        self.grid2.attach(self.subgroups_combobox, 2, 5, 11, 1)
+        self.grid2.attach(self.subgroups_combobox, 2, 6, 11, 1)
 
         self.subgroups_goto_button = Gtk.Button.new_with_label("Gehe zu\nUntergruppe")
         self.subgroups_goto_button.connect("clicked", lambda button: self.presenter.goto_subgroup())
-        self.grid2.attach(self.subgroups_goto_button, 2, 6, 3, 1)
+        self.grid2.attach(self.subgroups_goto_button, 2, 7, 3, 1)
         
         self.subgroups_add_button = Gtk.Button.new_with_label("Untergruppe\nhinzufügen")
         self.subgroups_add_button.connect("clicked", lambda button: self.presenter.add_subgroup())
-        self.grid2.attach(self.subgroups_add_button, 5, 6, 3, 1)
+        self.grid2.attach(self.subgroups_add_button, 5, 7, 3, 1)
         
         self.subgroups_remove_button = Gtk.Button.new_with_label("Untergruppe\nentfernen")
         self.subgroups_remove_button.connect("clicked", lambda button: self.presenter.remove_subgroup())
-        self.grid2.attach(self.subgroups_remove_button, 8, 6, 3, 1)
+        self.grid2.attach(self.subgroups_remove_button, 8, 7, 3, 1)
         
         
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Vorläufergruppen:'), 1, 7, 1, 1)
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Vorläufergruppen:'), 1, 8, 1, 1)
         self.predecessors_combobox = self._create_combobox()
-        self.grid2.attach(self.predecessors_combobox, 2, 7, 11, 1)
+        self.grid2.attach(self.predecessors_combobox, 2, 8, 11, 1)
 
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nachfolgegruppen:'), 1, 8, 1, 1)
-        self.successors_combobox = self._create_combobox()
-        self.grid2.attach(self.successors_combobox, 2, 8, 11, 1)
+        self.predecessor_goto_button = Gtk.Button.new_with_label("Gehe zu\nVorläufergruppe")
+        self.predecessor_goto_button.connect("clicked", lambda button: self.presenter.goto_predecessor())
+        self.grid2.attach(self.predecessor_goto_button, 2, 9, 3, 1)
         
+        self.predecessor_add_button = Gtk.Button.new_with_label("Vorläufergruppe\nhinzufügen")
+        self.predecessor_add_button.connect("clicked", lambda button: self.presenter.add_predecessor())
+        self.grid2.attach(self.predecessor_add_button, 5, 9, 3, 1)
+        
+        self.predecessor_remove_button = Gtk.Button.new_with_label("Vorläufergruppe\nentfernen")
+        self.predecessor_remove_button.connect("clicked", lambda button: self.presenter.remove_predecessor())
+        self.grid2.attach(self.predecessor_remove_button, 8, 9, 3, 1)
+
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nachfolgegruppen:'), 1, 10, 1, 1)
+        self.successors_combobox = self._create_combobox()
+        self.grid2.attach(self.successors_combobox, 2, 10, 11, 1)
+
+        self.successor_goto_button = Gtk.Button.new_with_label("Gehe zu\nNachfolgergruppe")
+        self.successor_goto_button.connect("clicked", lambda button: self.presenter.goto_successor())
+        self.grid2.attach(self.successor_goto_button, 2, 11, 3, 1)
+        
+        self.successor_add_button = Gtk.Button.new_with_label("Nachfolgergruppe\nhinzufügen")
+        self.successor_add_button.connect("clicked", lambda button: self.presenter.add_successor())
+        self.grid2.attach(self.successor_add_button, 5, 11, 3, 1)
+        
+        self.successor_remove_button = Gtk.Button.new_with_label("Nachfolgergruppe\nentfernen")
+        self.successor_remove_button.connect("clicked", lambda button: self.presenter.remove_successor())
+        self.grid2.attach(self.successor_remove_button, 8, 11, 3, 1)
+
     def _set_obergruppe(self, value):
         
         if value is None:
@@ -552,6 +580,18 @@ class GroupPage(GenericPage):
         
         return self.group_selection_dialog.run()
     
+    def _get_confirm_remove_subgroup(self):
+        
+        return self.confirmation_dialog.run(text="Willst Du die Untergruppe wirklich entfernen?")
+    
+    def _get_confirm_remove_successor(self):
+        
+        return self.confirmation_dialog.run(text="Willst Du die Nachfolgergruppe wirklich entfernen?")
+
+    def _get_confirm_remove_predecessor(self):
+        
+        return self.confirmation_dialog.run(text="Willst Du die Vorläufergruppe wirklich entfernen?")
+
     name = property(lambda self: self._get_string_value(self.groupname_entry),
                     lambda self, v: self._set_string_value(v, self.groupname_entry))
     abkuerzung = property(lambda self: self._get_string_value(self.abkuerzung_entry),
@@ -567,7 +607,7 @@ class GroupPage(GenericPage):
     aufloesung = property(lambda self: self._get_string_label(self.aufloesung_label),
                           lambda self, v: self._set_string_label(v, self.aufloesung_label))
     obergruppe = property(lambda self: self._get_string_label(self.parentgroup_label), _set_obergruppe)
-    untergruppe = property(lambda self: self._get_id_list(self.subgroups_combobox),
+    untergruppen = property(lambda self: self._get_id_list(self.subgroups_combobox),
                            lambda self, v: self._set_id_list(v, self.subgroups_combobox))
     vorgaenger = property(lambda self: self._get_id_list(self.predecessors_combobox),
                            lambda self, v: self._set_id_list(v, self.predecessors_combobox))
@@ -576,6 +616,9 @@ class GroupPage(GenericPage):
     
     # Dialog Properties
     new_group = property(_get_new_group)
+    confirm_remove_subgroup = property(_get_confirm_remove_subgroup)
+    confirm_remove_vorgaenger = property(_get_confirm_remove_predecessor)
+    confirm_remove_nachfolger = property(_get_confirm_remove_successor)
 
 class ZeitschriftenPage(GenericPage):
     

@@ -91,6 +91,10 @@ class GenericPresenter():
         
         pass
     
+    def reset_filter(self):
+        
+        self.dao.reset_filter()
+    
     def fetch_next(self):
         
         if self.viewmodel.id is None:
@@ -276,7 +280,7 @@ class GroupPresenter(GenericPresenter):
 
         self.viewmodel.gruendung = self._get_date(self.viewmodel.gruendung_tag, self.viewmodel.gruendung_monat, self.viewmodel.gruendung_jahr)    
         self.viewmodel.aufloesung = self._get_date(self.viewmodel.aufloesung_tag, self.viewmodel.aufloesung_monat, self.viewmodel.aufloesung_jahr)    
-        self.viewmodel.vorlaufer = self.dao.fetch_predecessors(self.viewmodel)
+        self.viewmodel.vorgaenger = self.dao.fetch_predecessors(self.viewmodel)
         self.viewmodel.nachfolger = self.dao.fetch_successors(self.viewmodel)
         self.viewmodel.untergruppen = self.dao.fetch_subgroups(self.viewmodel)
         self.viewmodel.obergruppe = self.dao.fetch_parentgroup(self.viewmodel)
@@ -292,6 +296,76 @@ class GroupPresenter(GenericPresenter):
         except TypeError:
             pass
         return ''
+    
+    def goto_parentgroup(self):
+        
+        obergruppe = self.dao.fetch_parentgroup(self.viewmodel)
+        if obergruppe is not None:
+            self.fetch_by_id(obergruppe.id) 
+
+    def goto_subgroup(self):
+        
+        untergruppe_id = self.viewmodel.untergruppen
+        if untergruppe_id is not None:
+            self.reset_filter()
+            self.fetch_by_id(untergruppe_id) 
+
+    def add_subgroup(self):
+        
+        new_subgroup = self.viewmodel.new_group
+        if new_subgroup is not None:
+            self.dao.add_subgroup(self.viewmodel, new_subgroup)
+            self.update_derived_fields()
+            
+    def remove_subgroup(self):
+        
+        subgroup_id = self.viewmodel.untergruppen
+        if subgroup_id is not None and self.viewmodel.confirm_remove_subgroup:
+            self.dao.remove_subgroup(self.viewmodel, subgroup_id)
+            self.update_derived_fields()
+            
+    def goto_predecessor(self):
+        
+        vorgaenger_id = self.viewmodel.vorgaenger
+        if vorgaenger_id is not None:
+            self.reset_filter()
+            self.fetch_by_id(vorgaenger_id) 
+
+    def add_predecessor(self):
+        
+        new_predecessor = self.viewmodel.new_group
+        if new_predecessor is not None:
+            self.dao.add_predecessor(self.viewmodel, new_predecessor)
+            self.update_derived_fields()
+            
+    def remove_predecessor(self):
+        
+        predecessor_id = self.viewmodel.vorgaenger
+        if predecessor_id is not None and self.viewmodel.confirm_remove_vorgaenger:
+            self.dao.remove_predecessor(self.viewmodel, predecessor_id)
+            self.update_derived_fields()
+
+    def goto_successor(self):
+        
+        nachfolger_id = self.viewmodel.nachfolger
+        if nachfolger_id is not None:
+            self.reset_filter()
+            self.fetch_by_id(nachfolger_id) 
+
+    def add_successor(self):
+        
+        new_successor = self.viewmodel.new_group
+        if new_successor is not None:
+            self.dao.add_successor(self.viewmodel, new_successor)
+            self.update_derived_fields()
+            
+    def remove_successor(self):
+        
+        successor_id = self.viewmodel.nachfolger
+        if successor_id is not None and self.viewmodel.confirm_remove_nachfolger:
+            self.dao.remove_successor(self.viewmodel, successor_id)
+            self.update_derived_fields()
+
 
 class ZeitschriftenPresenter(GenericPresenter):
     

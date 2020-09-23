@@ -636,6 +636,11 @@ class GenericDao:
         
         self.connection = connection
         
+    def reset_filter(self):
+
+        for label in self.filter.labels:
+            self.filter.set_property_value(label, None)
+        
     def count(self, object_filter=None):
 
         if object_filter is None:
@@ -677,12 +682,10 @@ class GenericDao:
     
     def fetch_next(self, object):
     
-        stmt = select([self.table]).where(
-            and_(
-                self.filter.filter_expression,
-                self.filter.get_next_expression(object)
-            )
-        ).order_by(*self.filter.sort_order_asc)
+        stmt = select([self.table])
+        where_condition = and_(self.filter.filter_expression, self.filter.get_next_expression(object))
+        stmt = stmt.where(where_condition)
+        stmt = stmt.order_by(*self.filter.sort_order_asc)
         row = self.connection.execute(stmt).fetchone()
         if row == None:
             return self.fetch_first(object)
@@ -764,7 +767,6 @@ class BroschDao(GenericDao):
         self.table = BROSCH_TABLE
         self.join = BROSCH_TABLE
 
-    
     def fetch_next_number(self, hauptsystematik: int, format: int):
         
         max = self.connection.execute(select([func.max(BROSCH_TABLE.c.nummer)]).where(
@@ -909,10 +911,10 @@ class GroupDao(GenericDao):
             # Join already exists
             pass
     
-    def delete_subgroup(self, group, subgroup):
+    def remove_subgroup(self, group, subgroup_id):
         
         query = UNTERGRUPPEN_TABLE.delete().where(and_(UNTERGRUPPEN_TABLE.c.gruppenid == group.id,
-                                                       UNTERGRUPPEN_TABLE.c.untergruppenid == subgroup.id))
+                                                       UNTERGRUPPEN_TABLE.c.untergruppenid == subgroup_id))
         self.connection.execute(query)
     
     def fetch_parentgroup(self, group):
@@ -941,6 +943,22 @@ class GroupDao(GenericDao):
             groups.append(self._map_row(row, Group()))
         return groups
     
+    def add_predecessor(self, group, predecessor):
+        
+        query = VORLAEUFER_TABLE.insert().values({'gruppenid': group.id, 'vorlaeuferid': predecessor.id})
+        try:
+            self.connection.execute(query)
+        except IntegrityError:
+            # Join already exists
+            pass
+    
+    def remove_predecessor(self, group, predecessor_id):
+        
+        query = VORLAEUFER_TABLE.delete().where(and_(VORLAEUFER_TABLE.c.gruppenid == group.id,
+                                                       VORLAEUFER_TABLE.c.vorlaeuferid == predecessor_id))
+        self.connection.execute(query)
+    
+    
     def fetch_successors(self, group):
         
         if group.id is None:
@@ -952,6 +970,21 @@ class GroupDao(GenericDao):
         for row in self.connection.execute(query).fetchall():
             groups.append(self._map_row(row, Group()))
         return groups
+    
+    def add_successor(self, group, successor):
+        
+        query = VORLAEUFER_TABLE.insert().values({'gruppenid': successor.id, 'vorlaeuferid': group.id})
+        try:
+            self.connection.execute(query)
+        except IntegrityError:
+            # Join already exists
+            pass
+    
+    def remove_successor(self, group, successor_id):
+        
+        query = VORLAEUFER_TABLE.delete().where(and_(VORLAEUFER_TABLE.c.gruppenid == successor_id,
+                                                     VORLAEUFER_TABLE.c.vorlaeuferid == group.id))
+        self.connection.execute(query)
     
     def _collect_values(self, group):
     
@@ -993,7 +1026,7 @@ class ZeitschriftenDao(GenericDao):
         self.table = ZEITSCH_TABLE
         self.join = ZEITSCH_TABLE
         self.filter = ZeitschriftenFilter()
-        
+
     def _map_row(self, row, zeitschrift):
         
         zeitschrift.id = row[ZEITSCH_TABLE.c.id]
