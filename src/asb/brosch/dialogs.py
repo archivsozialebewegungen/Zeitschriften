@@ -732,9 +732,9 @@ class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
     def _get_filter(self):
         
         brosch_filter = BroschFilter()
-        brosch_filter.titel_filter = self._get_string_value(self.titel_entry)
-        brosch_filter.systematik_filter = self._get_string_value(self.systematik_entry)
-        brosch_filter.ort_filter = self._get_string_value(self.ort_entry)
+        brosch_filter.set_property_value("Titel", self._get_string_value(self.titel_entry))
+        brosch_filter.set_property_value("Systematik", self._get_string_value(self.systematik_entry))
+        brosch_filter.set_property_value("Ort", self._get_string_value(self.ort_entry))
         if self.and_checkbutton.get_active():
             brosch_filter.combination = BroschFilter.COMBINATION_AND
         else:
@@ -743,9 +743,9 @@ class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
     
     def _set_filter(self, brosch_filter):
         
-        self._set_string_value(brosch_filter.titel_filter, self.titel_entry)
-        self._set_string_value(brosch_filter.systematik_filter, self.systematik_entry)
-        self._set_string_value(brosch_filter.ort_filter, self.ort_entry)
+        self._set_string_value(brosch_filter.get_property_value('Titel'), self.titel_entry)
+        self._set_string_value(brosch_filter.get_property_value('Systematik'), self.systematik_entry)
+        self._set_string_value(brosch_filter.get_property_value('Ort'), self.ort_entry)
         
     filter = property(_get_filter, _set_filter)
 

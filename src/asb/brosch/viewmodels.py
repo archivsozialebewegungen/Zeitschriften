@@ -452,10 +452,12 @@ class GroupPage(GenericPage):
     @inject
     def __init__(self, presenter: GroupPresenter,
                  confirmation_dialog: ConfirmationDialogWrapper,
+                 group_selection_dialog: GroupSelectionDialogWrapper,
                  filter_dialog: GroupFilterDialogWrapper
                  ):
 
         super().__init__(presenter, confirmation_dialog, filter_dialog)
+        self.group_selection_dialog = group_selection_dialog
 
     def set_invisible_properties(self):
         
@@ -498,22 +500,46 @@ class GroupPage(GenericPage):
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik 2:'), 3, 3, 1, 1)
         self.groupsystematik2_entry = Gtk.Entry()
         self.grid.attach(self.groupsystematik2_entry, 4, 3, 1, 1)
-        
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Übergeordnete Gruppe:'), 1, 4, 1, 1)
-        self.parentgroup_label = Gtk.Label(halign=Gtk.Align.START, label='')
-        self.grid.attach(self.parentgroup_label, 2, 4, 11, 1)
 
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Untergruppen:'), 1, 5, 1, 1)
+    def add_additional_widgets(self):
+        
+        self.grid2 = Gtk.Grid()
+        self.grid2.set_border_width(5)
+        self.grid2.set_row_spacing(5)
+        self.grid2.set_column_spacing(5)
+        
+        self.pack_start(self.grid2, True, True, 0)
+
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Übergeordnete Gruppe:'), 1, 4, 1, 1)
+        self.parentgroup_label = Gtk.Label(halign=Gtk.Align.START, label='', width_chars=WIDTH_11)
+        self.grid2.attach(self.parentgroup_label, 2, 4, 11, 1)
+
+        # Untergruppen
+        
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Untergruppen:'), 1, 5, 1, 1)
         self.subgroups_combobox = self._create_combobox()
-        self.grid.attach(self.subgroups_combobox, 2, 5, 11, 1)
-        
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Vorläufergruppen:'), 1, 6, 1, 1)
-        self.predecessors_combobox = self._create_combobox()
-        self.grid.attach(self.predecessors_combobox, 2, 6, 11, 1)
+        self.grid2.attach(self.subgroups_combobox, 2, 5, 11, 1)
 
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Nachfolgegruppen:'), 1, 7, 1, 1)
+        self.subgroups_goto_button = Gtk.Button.new_with_label("Gehe zu\nUntergruppe")
+        self.subgroups_goto_button.connect("clicked", lambda button: self.presenter.goto_subgroup())
+        self.grid2.attach(self.subgroups_goto_button, 2, 6, 3, 1)
+        
+        self.subgroups_add_button = Gtk.Button.new_with_label("Untergruppe\nhinzufügen")
+        self.subgroups_add_button.connect("clicked", lambda button: self.presenter.add_subgroup())
+        self.grid2.attach(self.subgroups_add_button, 5, 6, 3, 1)
+        
+        self.subgroups_remove_button = Gtk.Button.new_with_label("Untergruppe\nentfernen")
+        self.subgroups_remove_button.connect("clicked", lambda button: self.presenter.remove_subgroup())
+        self.grid2.attach(self.subgroups_remove_button, 8, 6, 3, 1)
+        
+        
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Vorläufergruppen:'), 1, 7, 1, 1)
+        self.predecessors_combobox = self._create_combobox()
+        self.grid2.attach(self.predecessors_combobox, 2, 7, 11, 1)
+
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nachfolgegruppen:'), 1, 8, 1, 1)
         self.successors_combobox = self._create_combobox()
-        self.grid.attach(self.successors_combobox, 2, 7, 11, 1)
+        self.grid2.attach(self.successors_combobox, 2, 8, 11, 1)
         
     def _set_obergruppe(self, value):
         
@@ -522,6 +548,10 @@ class GroupPage(GenericPage):
         else:
             self.parentgroup_label.set_label(str(value))
             
+    def _get_new_group(self):
+        
+        return self.group_selection_dialog.run()
+    
     name = property(lambda self: self._get_string_value(self.groupname_entry),
                     lambda self, v: self._set_string_value(v, self.groupname_entry))
     abkuerzung = property(lambda self: self._get_string_value(self.abkuerzung_entry),
@@ -543,6 +573,9 @@ class GroupPage(GenericPage):
                            lambda self, v: self._set_id_list(v, self.predecessors_combobox))
     nachfolger = property(lambda self: self._get_id_list(self.successors_combobox),
                            lambda self, v: self._set_id_list(v, self.successors_combobox))
+    
+    # Dialog Properties
+    new_group = property(_get_new_group)
 
 class ZeitschriftenPage(GenericPage):
     

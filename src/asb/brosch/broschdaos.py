@@ -900,6 +900,21 @@ class GroupDao(GenericDao):
             groups.append(self._map_row(row, Group()))
         return groups
     
+    def add_subgroup(self, group, subgroup):
+        
+        query = UNTERGRUPPEN_TABLE.insert().values({'gruppenid': group.id, 'untergruppenid': subgroup.id})
+        try:
+            self.connection.execute(query)
+        except IntegrityError:
+            # Join already exists
+            pass
+    
+    def delete_subgroup(self, group, subgroup):
+        
+        query = UNTERGRUPPEN_TABLE.delete().where(and_(UNTERGRUPPEN_TABLE.c.gruppenid == group.id,
+                                                       UNTERGRUPPEN_TABLE.c.untergruppenid == subgroup.id))
+        self.connection.execute(query)
+    
     def fetch_parentgroup(self, group):
 
         if group.id is None:
