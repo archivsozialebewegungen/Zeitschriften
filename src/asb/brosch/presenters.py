@@ -7,7 +7,7 @@ from injector import inject, singleton
 from asb.brosch.broschdaos import NoDataException, DataError,\
     Group, GroupDao, Brosch, BroschDao,\
     PageObject, ZeitschriftenDao,\
-    JahrgaengeDao
+    JahrgaengeDao, Zeitschrift
 import os
 from sqlalchemy.exc import IntegrityError
     
@@ -170,6 +170,13 @@ class GenericPresenter():
         self.toggle_editing()
         self.update_derived_fields()
         
+    def search(self):
+        
+        record_id = self.viewmodel.search_id
+        if record_id is not None:
+            self.fetch_by_id(record_id)
+
+        
 class BroschPresenter(GenericPresenter):
 
     @inject
@@ -246,11 +253,6 @@ class BroschPresenter(GenericPresenter):
             self.save()
             self.update_derived_fields()
             
-    def search_brosch(self):
-        
-        brosch_id = self.viewmodel.search_id
-        if brosch_id is not None:
-            self.fetch_by_id(brosch_id)
 
 class GroupPresenter(GenericPresenter):
     
@@ -539,24 +541,23 @@ class JahrgangEditDialogPresenter:
                 pass
             raise error
 
-@singleton
-class BroschSearchDialogPresenter:
+class GenericSearchDialogPresenter:
     
-    @inject
-    def __init__(self, brosch_dao: BroschDao):
+    def __init__(self, dao, record_class):
     
         self.page_object = None    
-        self.brosch_dao = brosch_dao
+        self.dao = dao
+        self.record_class = record_class
         
-    def find_broschs(self):
+    def find_records(self):
 
-        self.page_object = PageObject(self.brosch_dao, Brosch, self.viewmodel.filter)
+        self.page_object = PageObject(self.dao, self.record_class, self.viewmodel.filter)
         self.page_object.init_object()
         self.update_view()
         
     def update_view(self):
         
-        self.viewmodel.broschs = self.page_object.objects
+        self.viewmodel.records = self.page_object.objects
         first_record = self.page_object.current_page * self.page_object.page_size + 1
         last_record = (self.page_object.current_page + 1) * self.page_object.page_size
         if last_record > self.page_object.count:
@@ -580,3 +581,27 @@ class BroschSearchDialogPresenter:
             return
         self.page_object.fetch_next()
         self.update_view()
+        
+@singleton
+class BroschSearchDialogPresenter(GenericSearchDialogPresenter):
+    
+    @inject
+    def __init__(self, brosch_dao: BroschDao):
+    
+        super().__init__(brosch_dao, Brosch)
+
+@singleton
+class GroupSearchDialogPresenter(GenericSearchDialogPresenter):
+    
+    @inject
+    def __init__(self, group_dao: GroupDao):
+    
+        super().__init__(group_dao, Group)
+
+@singleton
+class ZeitschriftenSearchDialogPresenter(GenericSearchDialogPresenter):
+    
+    @inject
+    def __init__(self, zeitsch_dao: ZeitschriftenDao):
+    
+        super().__init__(zeitsch_dao, Zeitschrift)

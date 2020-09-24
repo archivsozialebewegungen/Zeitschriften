@@ -9,7 +9,8 @@ from injector import inject, singleton
 from asb.brosch.presenters import GroupSelectionPresenter,\
     BroschFilterDialogPresenter, JahrgangEditDialogPresenter,\
     ZeitschriftenFilterDialogPresenter, BroschSearchDialogPresenter,\
-    GroupFilterDialogPresenter
+    GroupFilterDialogPresenter, GroupSearchDialogPresenter,\
+    ZeitschriftenSearchDialogPresenter
 from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter,\
     ZeitschriftenFilter, GruppenFilter
 import os
@@ -604,24 +605,25 @@ class JahrgangEditDialogWrapper:
         
         return None
 
-class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
+class GenericSearchDialog(Gtk.Dialog, ViewModelMixin):
     
     CANCEL = 1
     FIND = 2
     OK = 3
     
-    def __init__(self, presenter):
+    def __init__(self, presenter, filter_object, titel="Suche"):
 
         self.presenter = presenter
         self.presenter.viewmodel = self
+        self.filter_object = filter_object
         
-        Gtk.Dialog.__init__(self, title="Broschürensuche", flags=0)
+        Gtk.Dialog.__init__(self, title="Suche", flags=0)
         self.add_buttons(
-            Gtk.STOCK_FIND, BroschSearchDialog.FIND,
-            Gtk.STOCK_CANCEL, BroschSearchDialog.CANCEL,
-            Gtk.STOCK_OK, BroschSearchDialog.OK
+            Gtk.STOCK_FIND, GenericSearchDialog.FIND,
+            Gtk.STOCK_CANCEL, GenericSearchDialog.CANCEL,
+            Gtk.STOCK_OK, GenericSearchDialog.OK
         )
-        self.set_default_response(BroschSearchDialog.FIND)
+        self.set_default_response(GenericSearchDialog.FIND)
 
         self.set_default_size(500, 600)
 
@@ -634,8 +636,17 @@ class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
         self._init_combining(main_box)
         self._init_navigation(main_box)
         
-        self.result_combobox = self._create_treeview()
-        main_box.add(self.result_combobox)
+        self._init_result_view(main_box)
+                
+        self.errormessage_label = Gtk.Label()
+        main_box.add(self.errormessage_label)
+        
+        self.show_all()
+
+    def _init_result_view(self, box):
+        
+        self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
+        box.add(self.result_combobox)
 
         cell_renderer = Gtk.CellRendererText()
         col = Gtk.TreeViewColumn("Signatur", cell_renderer, text=0)
@@ -646,11 +657,7 @@ class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
         col = Gtk.TreeViewColumn("Title", cell_renderer, text=0)
         col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].titel))
         self.result_combobox.append_column(col)
-                
-        self.errormessage_label = Gtk.Label()
-        main_box.add(self.errormessage_label)
-        
-        self.show_all()
+
 
     def _init_navigation(self, box):
         
@@ -668,24 +675,18 @@ class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
         self.result_stat_label = Gtk.Label(label="Noch keine Suche durchgeführt!")
         navbox.add(self.result_stat_label)
         
-
-        
         box.add(navbox)
-    def _create_treeview(self):
-        
-        view = Gtk.TreeView(Gtk.ListStore(object))
-        return view
-
-    def _set_tree_view(self, brosch_list, treeview: Gtk.TreeView):
+    
+    def _set_tree_view(self, result_list, treeview: Gtk.TreeView):
         
         model = treeview.get_model()
         
         while len(model) > 0:
             model.remove(model.get_iter(len(model) - 1))
-        for element in brosch_list:
+        for element in result_list:
             model.append([element])
             
-    def _get_brosch_from_tree_view(self, treeview: Gtk.TreeView):
+    def _get_record_from_tree_view(self, treeview: Gtk.TreeView):
         
         model, tree_iter = treeview.get_selection().get_selected()        
 
@@ -717,39 +718,33 @@ class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
         entry_grid.set_row_spacing(5)
         entry_grid.set_column_spacing(5)
         
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Titel enthält:'), 1, 0, 1, 1)
-        self.titel_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.titel_entry, 2, 0, 1, 1)
-
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik:'), 1, 1, 1, 1)
-        self.systematik_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.systematik_entry, 2, 1, 1, 1)
-
-        entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Ort:'), 1, 2, 1, 1)
-        self.ort_entry = Gtk.Entry(width_chars=40)
-        entry_grid.attach(self.ort_entry, 2, 2, 1, 1)
+        row = 0
+        self.entries = {}
+        for label in self.filter_object.labels:
+            entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label=label), 1, row, 1, 1)
+            self.entries[label] = Gtk.Entry(width_chars=40)
+            entry_grid.attach(self.entries[label], 2, row, 1, 1)
+            row += 1
 
     def _get_filter(self):
         
-        brosch_filter = BroschFilter()
-        brosch_filter.set_property_value("Titel", self._get_string_value(self.titel_entry))
-        brosch_filter.set_property_value("Systematik", self._get_string_value(self.systematik_entry))
-        brosch_filter.set_property_value("Ort", self._get_string_value(self.ort_entry))
-        if self.and_checkbutton.get_active():
-            brosch_filter.combination = BroschFilter.COMBINATION_AND
-        else:
-            brosch_filter.combination = BroschFilter.COMBINATION_OR
-        return brosch_filter
+        for label in self.filter_object.labels:
+            self.filter_object.set_property_value(label, self._get_string_value(self.entries[label]))
+            if self.and_checkbutton.get_active():
+                self.filter_object.combination = BroschFilter.COMBINATION_AND
+            else:
+                self.filter_object.combination = BroschFilter.COMBINATION_OR
+        return self.filter_object
     
-    def _set_filter(self, brosch_filter):
+    def _set_filter(self, filter_object):
         
-        self._set_string_value(brosch_filter.get_property_value('Titel'), self.titel_entry)
-        self._set_string_value(brosch_filter.get_property_value('Systematik'), self.systematik_entry)
-        self._set_string_value(brosch_filter.get_property_value('Ort'), self.ort_entry)
+        self.filter_object = filter_object
+        for label in filter_object.labels:
+            self._set_string_value(self.filter_object.get_property_value(label), self.entries[label])
         
     filter = property(_get_filter, _set_filter)
 
-    broschs = property(lambda self: self._get_brosch_from_tree_view(self.result_combobox),
+    records = property(lambda self: self._get_record_from_tree_view(self.result_combobox),
                         lambda self, v: self._set_tree_view(v, self.result_combobox))
 
     result_stat = property(lambda self: self._get_string_label(self.result_stat_label),
@@ -758,9 +753,54 @@ class BroschSearchDialog(Gtk.Dialog, ViewModelMixin):
     errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
                             lambda self, v: self._set_string_label(v, self.errormessage_label))
     
+
+class BroschSearchDialog(GenericSearchDialog):
     
-@singleton
-class BroschSearchDialogWrapper():
+    def _init_result_view(self, box):
+        
+        self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
+        box.add(self.result_combobox)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Signatur", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].signatur))
+        self.result_combobox.append_column(col)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Title", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].titel))
+        self.result_combobox.append_column(col)
+
+class GroupSearchDialog(GenericSearchDialog):
+    
+    def _init_result_view(self, box):
+        
+        self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
+        box.add(self.result_combobox)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Abkürzung", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].abkuerzung))
+        self.result_combobox.append_column(col)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Name", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].name))
+        self.result_combobox.append_column(col)
+    
+class ZeitschriftenSearchDialog(GenericSearchDialog):
+    
+    def _init_result_view(self, box):
+        
+        self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
+        box.add(self.result_combobox)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Titel", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].titel))
+        self.result_combobox.append_column(col)
+
+class GenericSearchDialogWrapper():
     
     @inject
     def __init__(self, presenter: BroschSearchDialogPresenter):
@@ -769,21 +809,51 @@ class BroschSearchDialogWrapper():
         
     def run(self):
         
-        dialog = BroschSearchDialog(self.presenter)
+        dialog = self.dialog_class(self.presenter, self.filter)
         dialog_end = False
         
         while not dialog_end:
             result = dialog.run()
             dialog.errormessage = None
-            brosch = None
-            if result == BroschSearchDialog.OK:
-                brosch = dialog.broschs
+            record = None
+            if result == GenericSearchDialog.OK:
+                record = dialog.records
                 dialog_end = True
-            elif result == BroschSearchDialog.FIND:
-                self.presenter.find_broschs()
-            elif result == BroschSearchDialog.CANCEL:
+            elif result == GenericSearchDialog.FIND:
+                self.presenter.find_records()
+            elif result == GenericSearchDialog.CANCEL:
                 dialog_end = True 
         dialog.destroy()
-        if brosch is None:
+        if record is None:
             return None
-        return brosch.id
+        return record.id
+
+@singleton
+class BroschSearchDialogWrapper(GenericSearchDialogWrapper):
+    
+    @inject
+    def __init__(self, presenter: BroschSearchDialogPresenter, record_filter: BroschFilter):
+        
+        super().__init__(presenter)
+        self.dialog_class = BroschSearchDialog
+        self.filter = record_filter
+        
+@singleton
+class GroupSearchDialogWrapper(GenericSearchDialogWrapper):
+    
+    @inject
+    def __init__(self, presenter: GroupSearchDialogPresenter, record_filter: GruppenFilter):
+        
+        super().__init__(presenter)
+        self.dialog_class = GroupSearchDialog
+        self.filter = record_filter
+        
+@singleton
+class ZeitschriftenSearchDialogWrapper(GenericSearchDialogWrapper):
+    
+    @inject
+    def __init__(self, presenter: ZeitschriftenSearchDialogPresenter, record_filter: ZeitschriftenFilter):
+        
+        super().__init__(presenter)
+        self.dialog_class = ZeitschriftenSearchDialog
+        self.filter = record_filter

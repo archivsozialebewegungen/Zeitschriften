@@ -542,6 +542,7 @@ class GruppenFilter(GenericFilter):
 
         super().__init__([TextFilterProperty([GROUP_TABLE.c.name], "Name"),
                           TextFilterProperty([GROUP_TABLE.c.ort], "Ort"),
+                          TextFilterProperty([GROUP_TABLE.c.abkuerzung], "Abkürzung"),
                           SystematikFilterProperty([GROUP_TABLE.c.systematik1, GROUP_TABLE.c.systematik2])])        
         self.sort_order_asc = [GROUP_TABLE.c.name.asc()]
         self.sort_order_desc = [GROUP_TABLE.c.name.desc()]
