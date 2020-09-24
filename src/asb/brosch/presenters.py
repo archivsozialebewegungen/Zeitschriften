@@ -552,7 +552,11 @@ class GenericSearchDialogPresenter:
     def find_records(self):
 
         self.page_object = PageObject(self.dao, self.record_class, self.viewmodel.filter)
-        self.page_object.init_object()
+        try:
+            self.page_object.init_object()
+        except DataError as e:
+            self.viewmodel.errormessage = e.message
+            return
         self.update_view()
         
     def update_view(self):

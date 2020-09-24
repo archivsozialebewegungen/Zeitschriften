@@ -647,17 +647,11 @@ class GenericSearchDialog(Gtk.Dialog, ViewModelMixin):
         
         self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
         box.add(self.result_combobox)
+        self.result_combobox.connect('row-activated', self.return_ok)
 
-        cell_renderer = Gtk.CellRendererText()
-        col = Gtk.TreeViewColumn("Signatur", cell_renderer, text=0)
-        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].signatur))
-        self.result_combobox.append_column(col)
-
-        cell_renderer = Gtk.CellRendererText()
-        col = Gtk.TreeViewColumn("Title", cell_renderer, text=0)
-        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].titel))
-        self.result_combobox.append_column(col)
-
+    def return_ok(self, eins, zwei, drei):
+        
+        self.response(GenericSearchDialog.OK)
 
     def _init_navigation(self, box):
         
@@ -723,9 +717,15 @@ class GenericSearchDialog(Gtk.Dialog, ViewModelMixin):
         for label in self.filter_object.labels:
             entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label=label), 1, row, 1, 1)
             self.entries[label] = Gtk.Entry(width_chars=40)
+            self.entries[label].set_activates_default(True)
             entry_grid.attach(self.entries[label], 2, row, 1, 1)
             row += 1
 
+        # make find button the default
+        find_button = self.get_widget_for_response(response_id=GenericSearchDialog.FIND)
+        find_button.set_can_default(True)
+        find_button.grab_default()
+        
     def _get_filter(self):
         
         for label in self.filter_object.labels:
@@ -758,8 +758,7 @@ class BroschSearchDialog(GenericSearchDialog):
     
     def _init_result_view(self, box):
         
-        self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
-        box.add(self.result_combobox)
+        super()._init_result_view(box)
 
         cell_renderer = Gtk.CellRendererText()
         col = Gtk.TreeViewColumn("Signatur", cell_renderer, text=0)
@@ -775,8 +774,7 @@ class GroupSearchDialog(GenericSearchDialog):
     
     def _init_result_view(self, box):
         
-        self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
-        box.add(self.result_combobox)
+        super()._init_result_view(box)
 
         cell_renderer = Gtk.CellRendererText()
         col = Gtk.TreeViewColumn("Abkürzung", cell_renderer, text=0)
@@ -792,8 +790,7 @@ class ZeitschriftenSearchDialog(GenericSearchDialog):
     
     def _init_result_view(self, box):
         
-        self.result_combobox = Gtk.TreeView(Gtk.ListStore(object))
-        box.add(self.result_combobox)
+        super()._init_result_view(box)
 
         cell_renderer = Gtk.CellRendererText()
         col = Gtk.TreeViewColumn("Titel", cell_renderer, text=0)
