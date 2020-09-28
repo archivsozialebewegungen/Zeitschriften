@@ -351,8 +351,8 @@ class SystematikFilterProperty:
         for column in self.columns:
             expressions.append(
                 or_(
-                    column == self._systematik,
-                    column.ilike('%s.%%' % self._systematik))
+                    column == value,
+                    column.ilike('%s.%%' % value))
             )
         return expressions
     
@@ -369,8 +369,7 @@ class BroschSystematikFilterProperty(SystematikFilterProperty):
         
         expressions = self._get_systematik_expressions(value)
         try:
-            int(self._systematik)
-            expressions.append(BROSCH_TABLE.c.hauptsystematik == value)
+            expressions.append(BROSCH_TABLE.c.hauptsystematik == int(value))
         except ValueError:
             pass
         except TypeError:
@@ -460,6 +459,7 @@ class BroschFilter(GenericFilter):
 
         super().__init__([TextFilterProperty([BROSCH_TABLE.c.titel, BROSCH_TABLE.c.untertitel], "Titel"),
                           TextFilterProperty([BROSCH_TABLE.c.ort], "Ort"),
+                          TextFilterProperty([BROSCH_TABLE.c.name, BROSCH_TABLE.c.vorname, BROSCH_TABLE.c.visdp, BROSCH_TABLE.c.herausgeber], 'Name'),
                           BroschSystematikFilterProperty()])        
         self._sort_order = self.TITEL_ORDER
     
@@ -1150,13 +1150,26 @@ class JahrgaengeDao(GenericDao):
 
         query = select([self.join]).\
         where(JAHRGANG_TABLE.c.zid == zeitschrift.id).\
-        order_by(JAHRGANG_TABLE.c.jahr)
+        order_by(JAHRGANG_TABLE.c.jahr.desc())
         
         result = self.connection.execute(query)
         jahrgaenge = []
         for row in result.fetchall():
             jahrgaenge.append(self._map_row(row, Jahrgang()))
         return jahrgaenge
+
+    def fetch_jahrgang_for_zeitschrift(self, zeitschrift, jahr):
+
+        query = select([self.join]).\
+        where(JAHRGANG_TABLE.c.zid == zeitschrift.id).\
+        where(JAHRGANG_TABLE.c.jahr == jahr)
+        
+        result = self.connection.execute(query)
+        row = result.fetchone()
+        if row is None:
+            raise NoDataException()
+        
+        return self._map_row(row, Jahrgang())
 
     def _map_row(self, row, j):
         

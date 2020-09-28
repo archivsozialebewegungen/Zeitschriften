@@ -33,6 +33,8 @@ class GenericPage(Gtk.Box, ViewModelMixin):
         self.confirmation_dialog = confirmation_dialog
         self.filter_dialog = filter_dialog
         self.search_dialog = search_dialog
+        
+        self.question = "Frage nicht konfiguriert."
 
         self.set_invisible_properties()
 
@@ -165,8 +167,13 @@ class GenericPage(Gtk.Box, ViewModelMixin):
         
         return self.search_dialog.run()
 
+    def _get_question_result(self):
+        
+        return self.confirmation_dialog.run(text=self.question)
+    
     # Dialog properties
     confirm_deletion = property(_get_confirm_deletion)
+    question_result = property(_get_question_result)
     new_filter = property(_get_new_filter)
     search_id = property(_get_search_id)
     
@@ -799,6 +806,14 @@ class ZeitschriftenPage(GenericPage):
         self.jnew_button = Gtk.Button.new_with_label("Jahrgang\nanlegen")
         self.jnew_button.connect("clicked", lambda button: self.presenter.new_jahrgang())
         self.additional_button_box.pack_start(self.jnew_button, True, True, 0)
+
+        self.jdelete_button = Gtk.Button.new_with_label("Jahrgang\nlöschen")
+        self.jdelete_button.connect("clicked", lambda button: self.presenter.delete_jahrgang())
+        self.additional_button_box.pack_start(self.jdelete_button, True, True, 0)
+
+        self.jissue_button = Gtk.Button.new_with_label("Aktuelle Ausga-\nbe hinzufügen")
+        self.jissue_button.connect("clicked", lambda button: self.presenter.add_current_issue())
+        self.additional_button_box.pack_start(self.jissue_button, True, True, 0)
 
     def _get_edited_jahrgang(self):
         

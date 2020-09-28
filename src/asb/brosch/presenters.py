@@ -6,10 +6,12 @@ Created on 24.08.2020
 from injector import inject, singleton
 from asb.brosch.broschdaos import NoDataException, DataError,\
     Group, GroupDao, Brosch, BroschDao,\
-    PageObject, ZeitschriftenDao,\
-    JahrgaengeDao, Zeitschrift
+    PageObject, Jahrgang, JahrgaengeDao,\
+    Zeitschrift, ZeitschriftenDao
 import os
 from sqlalchemy.exc import IntegrityError
+from asb.brosch.services import ZeitschriftenService, MissingJahrgang,\
+    MissingNumber
     
 class GroupSelectionPresenter:
 
@@ -372,11 +374,13 @@ class GroupPresenter(GenericPresenter):
 class ZeitschriftenPresenter(GenericPresenter):
     
     @inject
-    def __init__(self, zeitschriften_dao: ZeitschriftenDao, gruppen_dao: GroupDao, jahrgaenge_dao: JahrgaengeDao):
+    def __init__(self, zeitschriften_dao: ZeitschriftenDao, zeitschriften_service: ZeitschriftenService,
+                 gruppen_dao: GroupDao, jahrgaenge_dao: JahrgaengeDao):
         
         self.dao = zeitschriften_dao
         self.gruppen_dao = gruppen_dao
         self.jahrgaenge_dao = jahrgaenge_dao
+        self.zeitschriften_service = zeitschriften_service
                 
     def update_derived_fields(self):
 
@@ -426,6 +430,19 @@ class ZeitschriftenPresenter(GenericPresenter):
     def _get_jahrgaenge(self):
         
         return self.jahrgaenge_dao.fetch_jahrgaenge_for_zeitschrift(self.viewmodel)
+    
+    def add_current_issue(self):
+        
+        try:
+            (year, number) = self.zeitschriften_service.fetch_new_number(self.viewmodel)
+        except (MissingJahrgang, MissingNumber):
+            self.viewmodel.errormessage = "Nummer der aktuellen Ausgabe kann nicht ermittelt werden."
+            return
+        
+        self.viewmodel.question = "Willst Du die Nummer %d zum Jahrgang %d hinzufügen?" % (number, year)
+        if self.viewmodel.question_result:
+            self.zeitschriften_service.add_new_number(self.viewmodel, year, number)
+        self.update_derived_fields()
         
     def reset(self):
         
@@ -471,6 +488,17 @@ class ZeitschriftenPresenter(GenericPresenter):
     def new_jahrgang(self):
         
         j = self.viewmodel.new_jahrgang
+        self.update_derived_fields()
+        
+    def delete_jahrgang(self):
+        
+        j = self.viewmodel.jahrgaenge
+        if j is None:
+            return
+        jg = self.jahrgaenge_dao.fetch_by_id(j, Jahrgang())
+        self.viewmodel.question = "Willst Du den Jahrgang %d wirklich löschen?" % jg.jahr
+        if self.viewmodel.question_result:
+            self.jahrgaenge_dao.delete(j)
         self.update_derived_fields()
 
     def change_directory(self):
