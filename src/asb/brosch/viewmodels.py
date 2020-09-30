@@ -671,7 +671,12 @@ class ZeitschriftenPage(GenericPage):
 
         self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Jahrgänge:'), 1, 3, 1, 1)
         self.jahrgaenge_combobox = self._create_combobox()
+        self.jahrgaenge_combobox.connect("changed", lambda button: self.presenter.set_nummern())
         self.grid2.attach(self.jahrgaenge_combobox, 2, 3, 2, 1)
+        
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nummern:'), 4, 3, 1, 1)
+        self.nummern_label = Gtk.Label(halign=Gtk.Align.START)
+        self.grid2.attach(self.nummern_label, 5, 3, 7, 1)
 
     def set_invisible_properties(self):
         
@@ -908,3 +913,6 @@ class ZeitschriftenPage(GenericPage):
     new_group = property(_get_new_group)
     new_directory = property(_get_new_directory)
     confirm_directory_deletion = property(_get_confirm_directory_deletion)
+    
+    nummern = property(lambda self: self._get_string_label(self.nummern_label),
+                    lambda self, v: self._set_string_label(v, self.nummern_label))

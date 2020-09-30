@@ -389,6 +389,17 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.viewmodel.nachfolgertitel = self._get_nachfolgertitel()
         self.viewmodel.gruppe = self._get_gruppenname()
         self.viewmodel.jahrgaenge = self._get_jahrgaenge()
+        self.set_nummern()
+        
+    def set_nummern(self):
+        
+        jg_id = self.viewmodel.jahrgaenge
+        if jg_id is None:
+            self.viewmodel.nummern = None
+            return
+        
+        jahrgang = self.jahrgaenge_dao.fetch_by_id(jg_id, Jahrgang())
+        self.viewmodel.nummern = jahrgang.nummern
         
     def _get_vorlaeufertitel(self):
         

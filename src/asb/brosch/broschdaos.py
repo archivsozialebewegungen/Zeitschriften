@@ -281,7 +281,7 @@ class Jahrgang:
 
     def __str__(self):
         
-        komplett = "N"
+        komplett = "F"
         if self.komplett:
             komplett = "K"
         
