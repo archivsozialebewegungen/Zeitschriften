@@ -14,6 +14,7 @@ from sqlalchemy.sql.functions import count, func
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import IntegrityError
 import os
+import re
 
 BROSCH_METADATA = MetaData()
 
@@ -356,6 +357,32 @@ class SystematikFilterProperty:
             )
         return expressions
     
+class SignaturProperty:
+    
+    def __init__(self):
+        
+        self.label = "Signatur"
+        self.signature_re = re.compile("(BRO)?\s*(\d+)\s*\.\s*0\s*.\s*(\d)\s*.\s*(\d+)", re.IGNORECASE)
+        
+    def build_subexpression(self, value):
+        
+        if value is None:
+            return True
+        
+        m = self.signature_re.match(value)
+        if m:
+            hauptsystematik = m.group(2)
+            format = m.group(3)
+            nummer = m.group(4)
+        else:
+            return False
+            
+            
+        return and_(BROSCH_TABLE.c.hauptsystematik == hauptsystematik,
+                    BROSCH_TABLE.c.format == format,
+                    BROSCH_TABLE.c.nummer == nummer)
+    
+    
 class BroschSystematikFilterProperty(SystematikFilterProperty):
 
     def __init__(self):
@@ -460,7 +487,8 @@ class BroschFilter(GenericFilter):
         super().__init__([TextFilterProperty([BROSCH_TABLE.c.titel, BROSCH_TABLE.c.untertitel], "Titel"),
                           TextFilterProperty([BROSCH_TABLE.c.ort], "Ort"),
                           TextFilterProperty([BROSCH_TABLE.c.name, BROSCH_TABLE.c.vorname, BROSCH_TABLE.c.visdp, BROSCH_TABLE.c.herausgeber], 'Name'),
-                          BroschSystematikFilterProperty()])        
+                          BroschSystematikFilterProperty(),
+                          SignaturProperty()])        
         self._sort_order = self.TITEL_ORDER
     
     def _get_sort_order(self):
