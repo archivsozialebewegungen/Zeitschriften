@@ -24,7 +24,7 @@ class ZeitschriftenService:
     def __init__(self, jahrgaenge_dao: JahrgaengeDao):
         
         self.dao = jahrgaenge_dao
-        self.last_number_re = re.compile('.*[^0-9](\d+).*?$')
+        self.last_number_re = re.compile('.*?(\d+)[^0-9]*$')
         self.trim_re = re.compile('^\s*(.*?)\s*$')
     '''
         Der Algorithmus sieht folgendermaßen aus:

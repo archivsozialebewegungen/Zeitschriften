@@ -73,6 +73,7 @@ class TestZeitschriftenService(unittest.TestCase):
         j = self.service._fetch_current_year()
 
         data = (
+            ["1", None, True, (j, 2), "Nur eine Nummer bislang"],
             ["17,18,19", None, True, (j, 20), "Simple"],
             [MissingNumber(), "17,18,19", True, (j, 20), "Keine Nummern, fortlaufend"],
             [MissingNumber(), None, False, (j, 1), "Keine Nummern, Jahrgangszählung"],
