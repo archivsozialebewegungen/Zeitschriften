@@ -507,19 +507,27 @@ class JahrgangDialog(Gtk.Dialog, ViewModelMixin):
         self.nummern_entry = Gtk.Entry(width_chars=40)
         self.grid.attach(self.nummern_entry, 2, 1, 5, 1)
                 
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Beschädigt:'), 1, 2, 1, 1)
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Sondernummern:'), 1, 2, 1, 1)
+        self.sondernummern_entry = Gtk.Entry(width_chars=40)
+        self.grid.attach(self.sondernummern_entry, 2, 2, 5, 1)
+                
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Beschädigt:'), 1, 3, 1, 1)
         self.beschaedigt_entry = Gtk.Entry(width_chars=40)
-        self.grid.attach(self.beschaedigt_entry, 2, 2, 5, 1)
+        self.grid.attach(self.beschaedigt_entry, 2, 3, 5, 1)
 
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Fehlend:'), 1, 3, 1, 1)
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Fehlend:'), 1, 4, 1, 1)
         self.fehlend_entry = Gtk.Entry(width_chars=40)
-        self.grid.attach(self.fehlend_entry, 2, 3, 5, 1)
+        self.grid.attach(self.fehlend_entry, 2, 4, 5, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Bemerkung:'), 1, 5, 1, 1)
+        self.bemerkung_entry = Gtk.Entry(width_chars=40)
+        self.grid.attach(self.bemerkung_entry, 2, 5, 5, 1)
 
         self.komplett_checkbutton = Gtk.CheckButton(label="Komplett")
-        self.grid.attach(self.komplett_checkbutton, 1, 4, 1, 1)
+        self.grid.attach(self.komplett_checkbutton, 1, 6, 1, 1)
 
         self.register_checkbutton = Gtk.CheckButton(label="Register")
-        self.grid.attach(self.register_checkbutton, 2, 4, 1, 1)
+        self.grid.attach(self.register_checkbutton, 2, 6, 1, 1)
 
     def _set_id(self, value):
         self._id = value
@@ -535,10 +543,14 @@ class JahrgangDialog(Gtk.Dialog, ViewModelMixin):
     id = property(_get_id, _set_id)
     nummern = property(lambda self: self._get_string_value(self.nummern_entry),
                             lambda self, v: self._set_string_value(v, self.nummern_entry))
+    sondernummern = property(lambda self: self._get_string_value(self.sondernummern_entry),
+                            lambda self, v: self._set_string_value(v, self.sondernummern_entry))
     beschaedigt = property(lambda self: self._get_string_value(self.beschaedigt_entry),
                             lambda self, v: self._set_string_value(v, self.beschaedigt_entry))
     fehlend = property(lambda self: self._get_string_value(self.fehlend_entry),
                             lambda self, v: self._set_string_value(v, self.fehlend_entry))
+    bemerkung = property(lambda self: self._get_string_value(self.bemerkung_entry),
+                            lambda self, v: self._set_string_value(v, self.bemerkung_entry))
     errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
                             lambda self, v: self._set_string_label(v, self.errormessage_label))
     visdp = property(lambda self: self._get_string_value(self.visdp_entry),

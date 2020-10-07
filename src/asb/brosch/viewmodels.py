@@ -660,23 +660,39 @@ class ZeitschriftenPage(GenericPage):
         self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Vorläufer:'), 1, 0, 1, 1)
         self.vorlaeufertitel_label = Gtk.Label(halign=Gtk.Align.START)
         self.grid2.attach(self.vorlaeufertitel_label, 2, 0, 5, 1)
+        
+        self.vorlaeufer_add_button = Gtk.Button.new_with_label("Vorläufer hinzufügen")
+        self.vorlaeufer_add_button.connect("clicked", lambda button: self.presenter.add_vorlaeufer())
+        self.grid2.attach(self.vorlaeufer_add_button, 1, 1, 3, 1)
 
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nachfolger:'), 1, 1, 1, 1)
+        self.vorlaeufer_delete_button = Gtk.Button.new_with_label("Vorläufer löschen")
+        self.vorlaeufer_delete_button.connect("clicked", lambda button: self.presenter.delete_vorlaeufer())
+        self.grid2.attach(self.vorlaeufer_delete_button, 4, 1, 3, 1)
+
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nachfolger:'), 1, 2, 1, 1)
         self.nachfolgertitel_label = Gtk.Label(halign=Gtk.Align.START)
-        self.grid2.attach(self.nachfolgertitel_label, 2, 1, 5, 1)
+        self.grid2.attach(self.nachfolgertitel_label, 2, 2, 5, 1)
 
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Gruppe:'), 1, 2, 1, 1)
+        self.nachfolger_add_button = Gtk.Button.new_with_label("Nachfolger hinzufügen")
+        self.nachfolger_add_button.connect("clicked", lambda button: self.presenter.add_nachfolger())
+        self.grid2.attach(self.nachfolger_add_button, 1, 3, 3, 1)
+        
+        self.nachfolger_delete_button = Gtk.Button.new_with_label("Nachfolger löschen")
+        self.nachfolger_delete_button.connect("clicked", lambda button: self.presenter.delete_nachfolger())
+        self.grid2.attach(self.nachfolger_delete_button, 4, 3, 3, 1)
+
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Gruppe:'), 1, 4, 1, 1)
         self.gruppe_label = Gtk.Label(halign=Gtk.Align.START)
-        self.grid2.attach(self.gruppe_label, 2, 2, 5, 1)
+        self.grid2.attach(self.gruppe_label, 2, 4, 5, 1)
 
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Jahrgänge:'), 1, 3, 1, 1)
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Jahrgänge:'), 1, 5, 1, 1)
         self.jahrgaenge_combobox = self._create_combobox()
         self.jahrgaenge_combobox.connect("changed", lambda button: self.presenter.set_nummern())
-        self.grid2.attach(self.jahrgaenge_combobox, 2, 3, 2, 1)
+        self.grid2.attach(self.jahrgaenge_combobox, 2, 5, 2, 1)
         
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nummern:'), 4, 3, 1, 1)
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nummern:'), 4, 5, 1, 1)
         self.nummern_label = Gtk.Label(halign=Gtk.Align.START)
-        self.grid2.attach(self.nummern_label, 5, 3, 7, 1)
+        self.grid2.attach(self.nummern_label, 5, 5, 7, 1)
 
     def set_invisible_properties(self):
         

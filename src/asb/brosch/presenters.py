@@ -401,6 +401,40 @@ class ZeitschriftenPresenter(GenericPresenter):
         jahrgang = self.jahrgaenge_dao.fetch_by_id(jg_id, Jahrgang())
         self.viewmodel.nummern = jahrgang.nummern
         
+    def add_vorlaeufer(self):
+        
+        vorlaeufer_id = self.viewmodel.search_id
+        if vorlaeufer_id is None:
+            return
+        self.dao.add_vorlaeufer(self.viewmodel, vorlaeufer_id)
+        self.update_derived_fields()
+        
+    def add_nachfolger(self):
+        
+        nachfolger_id = self.viewmodel.search_id
+        if nachfolger_id is None:
+            return
+        self.dao.add_nachfolger(self.viewmodel, nachfolger_id)
+        self.update_derived_fields()
+        
+    def delete_vorlaeufer(self):
+        
+        self.viewmodel.question = "Willst Du wirklich alle Verbindungen zu Vorläufern aufheben?"
+        if not self.viewmodel.question_result:
+            return
+        
+        self.dao.delete_all_vorlaeufer(self.viewmodel)
+        self.update_derived_fields()
+
+    def delete_nachfolger(self):
+        
+        self.viewmodel.question = "Willst Du wirklich alle Verbindungen zu Nachfolgern aufheben?"
+        if not self.viewmodel.question_result:
+            return
+        
+        self.dao.delete_all_nachfolger(self.viewmodel)
+        self.update_derived_fields()
+
     def _get_vorlaeufertitel(self):
         
         vorlaeufer = self.dao.fetch_vorlaeufer(self.viewmodel)

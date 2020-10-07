@@ -133,6 +133,8 @@ JAHRGANG_TABLE = Table(
     Column('nummern', String),
     Column('beschaedigt', String),
     Column('fehlend', String),
+    Column('sondernummern', String),
+    Column('bemerkung', String),
     Column('register', Boolean),
     Column('visdp', String),
     Column('komplett', Boolean),
@@ -274,6 +276,7 @@ class Jahrgang:
         self.nummern = None
         self.beschaedigt = None
         self.fehlend = None
+        self.sondernummern = None
         self.visdp = None
         self.titel = None
         self.zid = None
@@ -1148,7 +1151,27 @@ class ZeitschriftenDao(GenericDao):
         for row in result.fetchall():
             vorlaeufer.append(self._map_row(row, Zeitschrift()))
         return vorlaeufer
+
+    def add_vorlaeufer(self, zeitschrift, vorlaeufer_id):
+        
+        query = ZVORLAEUFER_TABLE.insert().values(vid=vorlaeufer_id, zid=zeitschrift.id)
+        self.connection.execute(query)
                 
+    def add_nachfolger(self, zeitschrift, nachfolger_id):
+        
+        query = ZVORLAEUFER_TABLE.insert().values(vid=zeitschrift.id, zid=nachfolger_id)
+        self.connection.execute(query)
+        
+    def delete_all_vorlaeufer(self, zeitschrift):
+        
+        query = ZVORLAEUFER_TABLE.delete().where(ZVORLAEUFER_TABLE.c.zid == zeitschrift.id)
+        self.connection.execute(query)
+                
+    def delete_all_nachfolger(self, zeitschrift):
+        
+        query = ZVORLAEUFER_TABLE.delete().where(ZVORLAEUFER_TABLE.c.vid == zeitschrift.id)
+        self.connection.execute(query)
+
     def fetch_nachfolger(self, zeitschrift):
         
         query = select([ZEITSCH_TABLE, ZVORLAEUFER_TABLE]).\
@@ -1205,8 +1228,10 @@ class JahrgaengeDao(GenericDao):
         j.erster_jg = row[ZEITSCH_TABLE.c.erster_jg]
         j.jahr = row[JAHRGANG_TABLE.c.jahr]
         j.nummern = row[JAHRGANG_TABLE.c.nummern]
+        j.sondernummern = row[JAHRGANG_TABLE.c.sondernummern]
         j.beschaedigt = row[JAHRGANG_TABLE.c.beschaedigt]
         j.fehlend = row[JAHRGANG_TABLE.c.fehlend]
+        j.bemerkung = row[JAHRGANG_TABLE.c.bemerkung]
         j.visdp = row[JAHRGANG_TABLE.c.visdp]
         j.titel = row[JAHRGANG_TABLE.c.titel]
         j.zid = row[JAHRGANG_TABLE.c.zid]
@@ -1219,8 +1244,10 @@ class JahrgaengeDao(GenericDao):
         return {
             'jahr': jahrgang.jahr,
             'nummern': jahrgang.nummern,
+            'sondernummern': jahrgang.sondernummern,
             'beschaedigt': jahrgang.beschaedigt,
             'fehlend': jahrgang.fehlend,
+            'bemerkung': jahrgang.bemerkung,
             'titel': jahrgang.titel,
             'zid': jahrgang.zid,
             'visdp': jahrgang.visdp,
