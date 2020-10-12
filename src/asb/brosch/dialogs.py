@@ -873,6 +873,8 @@ class GenericSearchDialogWrapper():
             if result == GenericSearchDialog.OK:
                 record = dialog.records
                 dialog_end = True
+            elif result == GenericSearchDialog.FIND:
+                self.presenter.find_records()
             elif result == GenericSearchDialog.CANCEL:
                 dialog_end = True 
         dialog.destroy()
