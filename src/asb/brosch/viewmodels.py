@@ -15,7 +15,7 @@ from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     JahrgangEditDialogWrapper, ZeitschriftenFilterDialogWrapper,\
     ZeitschDirectoryChooserDialogWrapper, BroschSearchDialogWrapper,\
     GroupFilterDialogWrapper, ZeitschriftenSearchDialogWrapper,\
-    GroupSearchDialogWrapper
+    GroupSearchDialogWrapper, ZDBSearchDialogWrapper
 
 WIDTH_11 = 55
 WIDTH_5 = 20
@@ -639,12 +639,14 @@ class ZeitschriftenPage(GenericPage):
                  group_selection_dialog: GroupSelectionDialogWrapper,
                  filter_dialog: ZeitschriftenFilterDialogWrapper,
                  directory_dialog: ZeitschDirectoryChooserDialogWrapper,
-                 search_dialog: ZeitschriftenSearchDialogWrapper
+                 search_dialog: ZeitschriftenSearchDialogWrapper,
+                 zdb_search_dialog: ZDBSearchDialogWrapper
                 ):
 
         self.jahrgang_edit_dialog = jahrgang_edit_dialog
         self.group_selection_dialog = group_selection_dialog
         self.directory_dialog = directory_dialog
+        self.zdb_search_dialog = zdb_search_dialog
         
         super().__init__(presenter, confirmation_dialog, filter_dialog, search_dialog)
     
@@ -685,14 +687,22 @@ class ZeitschriftenPage(GenericPage):
         self.gruppe_label = Gtk.Label(halign=Gtk.Align.START)
         self.grid2.attach(self.gruppe_label, 2, 4, 5, 1)
 
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Jahrgänge:'), 1, 5, 1, 1)
+        self.group_button = Gtk.Button.new_with_label("Gruppe ändern")
+        self.group_button.connect('clicked', lambda button: self.presenter.change_group())
+        self.grid2.attach(self.group_button, 1, 5, 3, 1)
+
+        self.group_delete_button = Gtk.Button.new_with_label("Gruppe löschen")
+        self.group_delete_button.connect('clicked', lambda button: self.presenter.delete_group())
+        self.grid2.attach(self.group_delete_button, 4, 5, 3, 1)
+
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Jahrgänge:'), 1, 6, 1, 1)
         self.jahrgaenge_combobox = self._create_combobox()
         self.jahrgaenge_combobox.connect("changed", lambda button: self.presenter.set_nummern())
-        self.grid2.attach(self.jahrgaenge_combobox, 2, 5, 2, 1)
+        self.grid2.attach(self.jahrgaenge_combobox, 2, 6, 2, 1)
         
-        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nummern:'), 4, 5, 1, 1)
+        self.grid2.attach(Gtk.Label(halign=Gtk.Align.START, label='Nummern:'), 4, 6, 1, 1)
         self.nummern_label = Gtk.Label(halign=Gtk.Align.START)
-        self.grid2.attach(self.nummern_label, 5, 5, 7, 1)
+        self.grid2.attach(self.nummern_label, 5, 6, 7, 1)
 
     def set_invisible_properties(self):
         
@@ -745,7 +755,12 @@ class ZeitschriftenPage(GenericPage):
 
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Spender*in:'), 7, 4, 1, 1)
         self.spender_entry = Gtk.Entry(width_chars=WIDTH_2)
-        self.grid.attach(self.spender_entry, 8, 4, 5, 1)
+        self.grid.attach(self.spender_entry, 8, 4, 2, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='ZDB-ID:'), 10, 4, 1, 1)
+        self.zdbid_entry = Gtk.Entry(width_chars=WIDTH_2)
+        self.grid.attach(self.zdbid_entry, 11, 4, 2, 1)
+
 
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Bemerkung:'), 1, 5, 1, 1)
         self.bemerkung_entry = Gtk.Entry(width_chars=WIDTH_11)
@@ -808,9 +823,9 @@ class ZeitschriftenPage(GenericPage):
 
     def add_additional_buttons(self):
             
-        self.group_button = Gtk.Button.new_with_label("Gruppe\nändern")
-        self.group_button.connect('clicked', lambda button: self.presenter.change_group())
-        self.additional_button_box.pack_start(self.group_button, True, True, 0)
+        self.zdb_button = Gtk.Button.new_with_label("ZDB\nSuche")
+        self.zdb_button.connect('clicked', lambda button: self.presenter.search_zdb())
+        self.additional_button_box.pack_start(self.zdb_button, True, True, 0)
         
         self.file_button = Gtk.Button.new_with_label("Verzeichnis\nändern")
         self.file_button.connect('clicked', lambda button: self.presenter.change_directory())
@@ -861,7 +876,14 @@ class ZeitschriftenPage(GenericPage):
     def _get_confirm_directory_deletion(self):
         
         return self.confirmation_dialog.run(text="Willst Du das Verzeichnis wirklich löschen?")
+    
+    def _get_zdb_id(self):
+        
+        result = self.zdb_search_dialog.run(self.titel)
+        return result
             
+    zdbid = property(lambda self: self._get_string_value(self.zdbid_entry),
+                        lambda self, v: self._set_string_value(v, self.zdbid_entry))
     titel = property(lambda self: self._get_string_value(self.titel_entry),
                     lambda self, v: self._set_string_value(v, self.titel_entry))
     untertitel = property(lambda self: self._get_string_value(self.untertitel_entry),
@@ -929,6 +951,7 @@ class ZeitschriftenPage(GenericPage):
     new_group = property(_get_new_group)
     new_directory = property(_get_new_directory)
     confirm_directory_deletion = property(_get_confirm_directory_deletion)
+    new_zdbid = property(_get_zdb_id)
     
     nummern = property(lambda self: self._get_string_label(self.nummern_label),
                     lambda self, v: self._set_string_label(v, self.nummern_label))

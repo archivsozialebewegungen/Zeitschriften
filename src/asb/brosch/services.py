@@ -7,7 +7,9 @@ from asb.brosch.broschdaos import ZeitschriftenDao, NoDataException, Jahrgang,\
     JahrgaengeDao
 from datetime import date
 import re
+import requests
 from injector import inject, singleton
+from pprint import pprint
 
 class MissingJahrgang(Exception):
     
@@ -103,3 +105,108 @@ class ZeitschriftenService:
         
         current_date = date.today()
         return current_date.year
+
+class JsonRecord:
+    
+    PICA_TITEL = '021A'
+    PICA_ZDBID = '006Z'
+    
+    def __init__(self, json_record):
+        
+        self.json_record = json_record
+        
+    def get_pica_item(self, pica, trenner):
+        
+        for record in self.data[pica][0]:
+            if trenner in record:
+                return record[trenner]
+        return ''
+
+    def _get_titel(self):
+        
+        return self.get_pica_item(self.PICA_TITEL, 'a')
+    
+    def _get_untertitel(self):
+        
+        return self.get_pica_item(self.PICA_TITEL, 'd')
+    
+    def _get_zdbid(self):
+        
+        try:
+            print(self.data[self.PICA_ZDBID][0][0][0])
+            return self.data[self.PICA_ZDBID][0][0][0]
+        except:
+            return ''
+    
+    data = property(lambda self: self.json_record['data'])
+    titel = property(_get_titel)
+    untertitel = property(_get_untertitel)
+    id = property(_get_zdbid)
+    
+class QueryResult:
+    
+    def __init__(self, json_result):
+        
+        self.json_result = json_result
+        self.total_records = json_result['totalItems']
+        self.records = []
+        for member in json_result['member']:
+            self.records.append(JsonRecord(member))
+        
+    def print(self):
+        
+        for record in self.records:
+            record.print()
+    
+    query = property(lambda self: self.json_result['freetextQuery'])
+    
+class ZDBService:
+    
+    def __init__(self):
+        
+        self.base_url = "https://www.zeitschriftendatenbank.de/api/hydra"
+        self.current_result = None
+        self.page_size = 15
+        self.current_page = None
+        
+    def find_titel(self, titel):
+        
+        self.current_page = 1
+        payload = {'q': 'tit=%s' % titel, 'size': "%d" % self.page_size, 'page': "1"}
+        return self.execute_query(payload)
+    
+    def execute_query(self, payload):
+        
+        result = requests.get(self.base_url, params=payload)
+        self.current_result = QueryResult(result.json())
+        return self.current_result
+    
+    def fetch_next(self):
+        
+        if self.current_page is None:
+            raise Exception("Es wurde noch keine query ausgeführt.")
+        
+        if self.current_page * self.page_size >= self.count:
+            return self.current_result
+        
+        self.current_page += 1
+        payload = {'q': self.query, 'size': "%d" % self.page_size, 'page': "%d" % self.current_page}
+        
+        return self.execute_query(payload)
+    
+    def fetch_previous(self):
+        
+        if self.current_page is None:
+            raise Exception("Es wurde noch keine query ausgeführt.")
+    
+        if self.current_page == 0:
+            return self.current_result    
+
+        self.current_page -= 1
+        payload = {'q': self.query, 'size': "%d" % self.page_size, 'page': "%d" % self.current_page}
+        
+        return self.execute_query(payload)
+    
+    query = property(lambda self: self.current_result.query)
+    count = property(lambda self: self.current_result.total_records)
+    

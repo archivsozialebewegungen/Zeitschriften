@@ -10,7 +10,7 @@ from asb.brosch.presenters import GroupSelectionPresenter,\
     BroschFilterDialogPresenter, JahrgangEditDialogPresenter,\
     ZeitschriftenFilterDialogPresenter, BroschSearchDialogPresenter,\
     GroupFilterDialogPresenter, GroupSearchDialogPresenter,\
-    ZeitschriftenSearchDialogPresenter
+    ZeitschriftenSearchDialogPresenter, ZDBSearchDialogPresenter
 from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter,\
     ZeitschriftenFilter, GruppenFilter
 import os
@@ -782,6 +782,52 @@ class BroschSearchDialog(GenericSearchDialog):
         col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].titel))
         self.result_combobox.append_column(col)
 
+class ZDBSearchDialog(GenericSearchDialog):
+    
+    def __init__(self, presenter, titel):
+
+        self.presenter = presenter
+        self.presenter.viewmodel = self
+        self.titel = titel
+        
+        Gtk.Dialog.__init__(self, title="Suche", flags=0)
+        self.add_buttons(
+            Gtk.STOCK_CANCEL, GenericSearchDialog.CANCEL,
+            Gtk.STOCK_OK, GenericSearchDialog.OK
+        )
+        self.set_default_response(GenericSearchDialog.OK)
+
+        self.set_default_size(500, 600)
+
+        box = self.get_content_area()
+
+        main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 5)
+        box.add(main_box)
+        
+        self._init_navigation(main_box)
+        self._init_result_view(main_box)
+                
+        self.errormessage_label = Gtk.Label()
+        main_box.add(self.errormessage_label)
+
+        self.presenter.find_records()
+                
+        self.show_all()
+
+    def _init_result_view(self, box):
+        
+        super()._init_result_view(box)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Titel", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].titel[:30]))
+        self.result_combobox.append_column(col)
+
+        cell_renderer = Gtk.CellRendererText()
+        col = Gtk.TreeViewColumn("Untertitle", cell_renderer, text=0)
+        col.set_cell_data_func(cell_renderer,lambda column, cell, model, tree_iter, unused: cell.set_property("text", model[tree_iter][0].untertitel[:40]))
+        self.result_combobox.append_column(col)
+        
 class GroupSearchDialog(GenericSearchDialog):
     
     def _init_result_view(self, box):
@@ -811,8 +857,7 @@ class ZeitschriftenSearchDialog(GenericSearchDialog):
 
 class GenericSearchDialogWrapper():
     
-    @inject
-    def __init__(self, presenter: BroschSearchDialogPresenter):
+    def __init__(self, presenter):
         
         self.presenter = presenter
         
@@ -828,8 +873,6 @@ class GenericSearchDialogWrapper():
             if result == GenericSearchDialog.OK:
                 record = dialog.records
                 dialog_end = True
-            elif result == GenericSearchDialog.FIND:
-                self.presenter.find_records()
             elif result == GenericSearchDialog.CANCEL:
                 dialog_end = True 
         dialog.destroy()
@@ -866,3 +909,16 @@ class ZeitschriftenSearchDialogWrapper(GenericSearchDialogWrapper):
         super().__init__(presenter)
         self.dialog_class = ZeitschriftenSearchDialog
         self.filter = record_filter
+        
+@singleton
+class ZDBSearchDialogWrapper(GenericSearchDialogWrapper):
+    
+    @inject
+    def __init__(self, presenter: ZDBSearchDialogPresenter):
+        
+        super().__init__(presenter)
+        self.dialog_class = ZDBSearchDialog
+        
+    def run(self, titel):
+        self.filter = titel
+        return super().run()

@@ -11,7 +11,7 @@ from asb.brosch.broschdaos import NoDataException, DataError,\
 import os
 from sqlalchemy.exc import IntegrityError
 from asb.brosch.services import ZeitschriftenService, MissingJahrgang,\
-    MissingNumber
+    MissingNumber, ZDBService
     
 class GroupSelectionPresenter:
 
@@ -435,6 +435,16 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.dao.delete_all_nachfolger(self.viewmodel)
         self.update_derived_fields()
 
+    def delete_group(self):
+        
+        self.viewmodel.question = "Willst Du wirklich die Verbindung zur Gruppe aufheben?"
+        if not self.viewmodel.question_result:
+            return
+        
+        self.viewmodel.gruppen_id = None
+        self.save()
+        self.update_derived_fields()
+
     def _get_vorlaeufertitel(self):
         
         vorlaeufer = self.dao.fetch_vorlaeufer(self.viewmodel)
@@ -567,6 +577,13 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.save()
         self.update_derived_fields()
         
+    def search_zdb(self):
+        
+        zdbid = self.viewmodel.new_zdbid
+        if zdbid is not None:
+            self.viewmodel.zdbid = zdbid
+            self.save()
+        
 @singleton
 class JahrgangEditDialogPresenter:
     
@@ -682,3 +699,35 @@ class ZeitschriftenSearchDialogPresenter(GenericSearchDialogPresenter):
     def __init__(self, zeitsch_dao: ZeitschriftenDao):
     
         super().__init__(zeitsch_dao, Zeitschrift)
+
+@singleton
+class ZDBSearchDialogPresenter:
+    
+    @inject
+    def __init__(self, service: ZDBService):
+    
+        self.zdbservice = service
+        
+    def find_records(self):
+
+        self.zdbservice.find_titel(self.viewmodel.titel)
+        self.update_view()
+        
+    def update_view(self):
+        
+        self.viewmodel.records = self.zdbservice.current_result.records
+        first_record = (self.zdbservice.current_page - 1) * self.zdbservice.page_size + 1
+        last_record = self.zdbservice.current_page * self.zdbservice.page_size
+        if last_record > self.zdbservice.count:
+            last_record = self.zdbservice.count
+        self.viewmodel.result_stat = "Datensätze %d bis %d von insgesamt %d Datensätzen" % (first_record, last_record, self.zdbservice.count)
+        
+    def prev_page(self):
+        
+        self.zdbservice.fetch_previous()
+        self.update_view()
+        
+    def next_page(self):
+        
+        self.zdbservice.fetch_next()
+        self.update_view()

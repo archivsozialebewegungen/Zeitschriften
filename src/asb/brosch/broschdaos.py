@@ -90,6 +90,7 @@ ZEITSCH_TABLE = Table(
     Column('untertitel', String),
     Column('plz', Integer),
     Column('fortlaufendbis', Integer),
+    Column('zdbid', String),
     Column('systematik1', String),
     Column('systematik2', String),
     Column('systematik3', String),
@@ -227,6 +228,7 @@ class Zeitschrift:
     def __init__(self):
         
         self.id = None
+        self.zdbid = None
         self.titel = None
         self.untertitel = None
         self.herausgeber = None
@@ -1062,6 +1064,7 @@ class ZeitschriftenDao(GenericDao):
     def _map_row(self, row, zeitschrift):
         
         zeitschrift.id = row[ZEITSCH_TABLE.c.id]
+        zeitschrift.zdbid = row[ZEITSCH_TABLE.c.zdbid]
         zeitschrift.titel = row[ZEITSCH_TABLE.c.titel]
         zeitschrift.untertitel = row[ZEITSCH_TABLE.c.untertitel]
         zeitschrift.herausgeber = row[ZEITSCH_TABLE.c.herausgeber]
@@ -1106,6 +1109,7 @@ class ZeitschriftenDao(GenericDao):
         
         return {
             'plzalt': zeitschrift.plzalt,
+            'zdbid': zeitschrift.zdbid,
             'unimeldung': zeitschrift.unimeldung,
             'untertitel': zeitschrift.untertitel,
             'plz': zeitschrift.plz,
@@ -1171,7 +1175,7 @@ class ZeitschriftenDao(GenericDao):
         
         query = ZVORLAEUFER_TABLE.delete().where(ZVORLAEUFER_TABLE.c.vid == zeitschrift.id)
         self.connection.execute(query)
-
+        
     def fetch_nachfolger(self, zeitschrift):
         
         query = select([ZEITSCH_TABLE, ZVORLAEUFER_TABLE]).\
