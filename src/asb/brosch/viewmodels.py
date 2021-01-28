@@ -15,7 +15,7 @@ from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     JahrgangEditDialogWrapper, ZeitschriftenFilterDialogWrapper,\
     ZeitschDirectoryChooserDialogWrapper, BroschSearchDialogWrapper,\
     GroupFilterDialogWrapper, ZeitschriftenSearchDialogWrapper,\
-    GroupSearchDialogWrapper, ZDBSearchDialogWrapper
+    GroupSearchDialogWrapper, ZDBSearchDialogWrapper, TextDisplayDialogWrapper
 
 WIDTH_11 = 55
 WIDTH_5 = 20
@@ -47,14 +47,8 @@ class GenericPage(Gtk.Box, ViewModelMixin):
         self.set_error_label()        
 
         self.add_generic_buttons()  
-        
-        self.additional_button_box = Gtk.ButtonBox.new(Gtk.Orientation.HORIZONTAL)
-        self.additional_button_box.set_layout(Gtk.ButtonBoxStyle.SPREAD)
-        self.additional_button_box.set_border_width(8)
-        self.pack_start(self.additional_button_box, True, True, 0)
-      
         self.add_additional_buttons()
-
+        
         self.presenter.set_viewmodel(self)
         self.mode = GenericPresenter.VIEW_MODE
         
@@ -64,35 +58,35 @@ class GenericPage(Gtk.Box, ViewModelMixin):
 
     def add_generic_buttons(self):
         
-        button_box = Gtk.ButtonBox.new(Gtk.Orientation.HORIZONTAL)
-        button_box.set_layout(Gtk.ButtonBoxStyle.SPREAD)
-        button_box.set_border_width(8)
-        self.pack_start(button_box, True, True, 0)
+        self.button_box = Gtk.ButtonBox.new(Gtk.Orientation.HORIZONTAL)
+        self.button_box.set_layout(Gtk.ButtonBoxStyle.SPREAD)
+        self.button_box.set_border_width(8)
+        self.pack_start(self.button_box, True, True, 0)
 
         self.edit_button = Gtk.Button.new_with_label("Bearbeiten")
         self.edit_button.connect("clicked", lambda button: self.presenter.toggle_editing())
-        button_box.pack_start(self.edit_button, True, True, 0)
+        self.button_box.pack_start(self.edit_button, True, True, 0)
         
         self.new_button = Gtk.Button.new_with_label("Neu anlegen")
         self.new_button.connect("clicked", lambda button: self.presenter.edit_new())
-        button_box.pack_start(self.new_button, True, True, 0)
+        self.button_box.pack_start(self.new_button, True, True, 0)
         
         self.save_button = Gtk.Button.new_with_label("Speichern")
         self.save_button.connect("clicked", lambda button: self.presenter.save())
         self.save_button.set_sensitive(False)
-        button_box.pack_start(self.save_button, True, True, 0)
+        self.button_box.pack_start(self.save_button, True, True, 0)
         
         self.delete_button = Gtk.Button.new_with_label("Löschen")
         self.delete_button.connect("clicked", lambda button: self.presenter.delete())
-        button_box.pack_start(self.delete_button, True, True, 0)
+        self.button_box.pack_start(self.delete_button, True, True, 0)
         
         self.filter_button = Gtk.Button.new_with_label("Filtern")
         self.filter_button.connect("clicked", lambda button: self.presenter.filter_data())
-        button_box.pack_start(self.filter_button, True, True, 0)
+        self.button_box.pack_start(self.filter_button, True, True, 0)
         
         self.filter_button = Gtk.Button.new_with_label("Suchen")
         self.filter_button.connect("clicked", lambda button: self.presenter.search())
-        button_box.pack_start(self.filter_button, True, True, 0)
+        self.button_box.pack_start(self.filter_button, True, True, 0)
 
 
 
@@ -111,8 +105,11 @@ class GenericPage(Gtk.Box, ViewModelMixin):
     
     def add_additional_buttons(self):
         
-        pass
-
+        self.additional_button_box = Gtk.ButtonBox.new(Gtk.Orientation.HORIZONTAL)
+        self.additional_button_box.set_layout(Gtk.ButtonBoxStyle.SPREAD)
+        self.additional_button_box.set_border_width(8)
+        self.pack_start(self.additional_button_box, True, True, 0)
+      
     def _set_edit_status(self, editable: bool):
 
         self.grid.set_sensitive(editable)
@@ -201,6 +198,8 @@ class BroschPage(GenericPage):
         super().__init__(presenter, confirmation_dialog, filter_dialog, search_dialog)
 
     def add_additional_buttons(self):
+        
+        super().add_additional_buttons()
         
         self.group_button = Gtk.Button.new_with_label("Gruppe ändern")
         self.group_button.connect('clicked', lambda button: self.presenter.change_group())
@@ -640,13 +639,15 @@ class ZeitschriftenPage(GenericPage):
                  filter_dialog: ZeitschriftenFilterDialogWrapper,
                  directory_dialog: ZeitschDirectoryChooserDialogWrapper,
                  search_dialog: ZeitschriftenSearchDialogWrapper,
-                 zdb_search_dialog: ZDBSearchDialogWrapper
+                 zdb_search_dialog: ZDBSearchDialogWrapper,
+                 text_display_dialog: TextDisplayDialogWrapper
                 ):
 
         self.jahrgang_edit_dialog = jahrgang_edit_dialog
         self.group_selection_dialog = group_selection_dialog
         self.directory_dialog = directory_dialog
         self.zdb_search_dialog = zdb_search_dialog
+        self.text_display_dialog = text_display_dialog
         
         super().__init__(presenter, confirmation_dialog, filter_dialog, search_dialog)
     
@@ -822,34 +823,55 @@ class ZeitschriftenPage(GenericPage):
         self.grid.attach(self.verzeichnis_label, 4, 9, 9, 1)
 
     def add_additional_buttons(self):
-            
-        self.zdb_button = Gtk.Button.new_with_label("ZDB\nSuche")
-        self.zdb_button.connect('clicked', lambda button: self.presenter.search_zdb())
-        self.additional_button_box.pack_start(self.zdb_button, True, True, 0)
         
+        self.additional_button_box = Gtk.VBox()
+        self.pack_start(self.additional_button_box, True, True, 0)
+        
+        box1 = Gtk.ButtonBox()
+        box1.set_layout(Gtk.ButtonBoxStyle.SPREAD)
+        box1.set_border_width(8)
+        self.additional_button_box.pack_start(box1, True, True, 0)
+
+        box2 = Gtk.ButtonBox()
+        box2.set_layout(Gtk.ButtonBoxStyle.SPREAD)
+        box2.set_border_width(8)
+        self.additional_button_box.pack_start(box2, True, True, 0)
+            
         self.file_button = Gtk.Button.new_with_label("Verzeichnis\nändern")
         self.file_button.connect('clicked', lambda button: self.presenter.change_directory())
-        self.additional_button_box.pack_start(self.file_button, True, True, 0)
+        box1.pack_start(self.file_button, True, True, 0)
 
         self.file_button = Gtk.Button.new_with_label("Verzeichnis\nlöschen")
         self.file_button.connect('clicked', lambda button: self.presenter.delete_directory())
-        self.additional_button_box.pack_start(self.file_button, True, True, 0)
+        box1.pack_start(self.file_button, True, True, 0)
 
         self.jedit_button = Gtk.Button.new_with_label("Jahrgang\nbearbeiten")
         self.jedit_button.connect("clicked", lambda button: self.presenter.edit_jahrgang())
-        self.additional_button_box.pack_start(self.jedit_button, True, True, 0)
+        box1.pack_start(self.jedit_button, True, True, 0)
 
         self.jnew_button = Gtk.Button.new_with_label("Jahrgang\nanlegen")
         self.jnew_button.connect("clicked", lambda button: self.presenter.new_jahrgang())
-        self.additional_button_box.pack_start(self.jnew_button, True, True, 0)
+        box1.pack_start(self.jnew_button, True, True, 0)
 
         self.jdelete_button = Gtk.Button.new_with_label("Jahrgang\nlöschen")
         self.jdelete_button.connect("clicked", lambda button: self.presenter.delete_jahrgang())
-        self.additional_button_box.pack_start(self.jdelete_button, True, True, 0)
+        box1.pack_start(self.jdelete_button, True, True, 0)
 
-        self.jissue_button = Gtk.Button.new_with_label("Aktuelle Ausga-\nbe hinzufügen")
+        self.jissue_button = Gtk.Button.new_with_label("Aktuelle Ausgabe hinzufügen")
         self.jissue_button.connect("clicked", lambda button: self.presenter.add_current_issue())
-        self.additional_button_box.pack_start(self.jissue_button, True, True, 0)
+        box2.pack_start(self.jissue_button, True, True, 0)
+
+        self.zdb_button = Gtk.Button.new_with_label("ZDB-Suche")
+        self.zdb_button.connect('clicked', lambda button: self.presenter.search_zdb())
+        box2.pack_start(self.zdb_button, True, True, 0)
+        
+        self.zdb_data_button = Gtk.Button.new_with_label("ZDB-Daten")
+        self.zdb_data_button.connect("clicked", lambda button: self.presenter.fetch_zdb_data())
+        box2.pack_start(self.zdb_data_button, True, True, 0)
+        
+        self.zdb_data_button = Gtk.Button.new_with_label("ZDB-Meldung")
+        self.zdb_data_button.connect("clicked", lambda button: self.presenter.submit_zdb_data())
+        box2.pack_start(self.zdb_data_button, True, True, 0)
 
     def _get_edited_jahrgang(self):
         
@@ -881,6 +903,13 @@ class ZeitschriftenPage(GenericPage):
         
         result = self.zdb_search_dialog.run(self.titel)
         return result
+    
+    def _get_zdb_info(self):
+        return None
+    
+    def _set_zdb_info(self, zdb_info):
+        
+        self.text_display_dialog.run(zdb_info, 'ZDB-Informationen')
             
     zdbid = property(lambda self: self._get_string_value(self.zdbid_entry),
                         lambda self, v: self._set_string_value(v, self.zdbid_entry))
@@ -952,6 +981,7 @@ class ZeitschriftenPage(GenericPage):
     new_directory = property(_get_new_directory)
     confirm_directory_deletion = property(_get_confirm_directory_deletion)
     new_zdbid = property(_get_zdb_id)
+    zdb_info = property(_get_zdb_info, _set_zdb_info)
     
     nummern = property(lambda self: self._get_string_label(self.nummern_label),
                     lambda self, v: self._set_string_label(v, self.nummern_label))

@@ -166,6 +166,59 @@ class BroschInitDialogWrapper:
         dialog.destroy()
         return return_value
 
+class TextDisplayDialog(Gtk.Dialog):
+
+    OK = 1
+
+    def __init__(self, text, title):
+
+        Gtk.Dialog.__init__(self, title=title, flags=0)
+        self.add_buttons(
+            Gtk.STOCK_OK, TextDisplayDialog.OK,
+        )
+        self.set_default_response(TextDisplayDialog.OK)
+
+        self.set_default_size(800, 500)
+
+        box = self.get_content_area()
+        
+        #label = Gtk.Label()
+        #label.set_text(text)
+        
+        # a scrollbar for the child widget (that is going to be the textview)
+        scrolled_window = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
+        scrolled_window.set_border_width(5)
+        #scrolled_window.set_size_request(800, 500)
+        # we scroll only if needed
+        scrolled_window.set_policy(
+            Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+
+        # a text buffer (stores text)
+        buffer = Gtk.TextBuffer()
+        buffer.insert_at_cursor(text)
+
+        # a textview (displays the buffer)
+        textview = Gtk.TextView(buffer=buffer)
+        # wrap the text, if needed, breaking lines in between words
+        textview.set_wrap_mode(Gtk.WrapMode.WORD)
+
+        # textview is scrolled
+        scrolled_window.add(textview)
+
+        box.add(scrolled_window)
+
+        #box.add(label)
+        self.show_all()
+        
+class TextDisplayDialogWrapper():
+
+    def run(self, message, title):
+        
+        dialog = TextDisplayDialog(message, title)
+        dialog.run()
+        dialog.destroy()
+        
+
 class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
 
     CANCEL = 1

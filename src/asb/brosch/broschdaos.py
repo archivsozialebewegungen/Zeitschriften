@@ -361,6 +361,25 @@ class SystematikFilterProperty:
                     column.ilike('%s.%%' % value))
             )
         return expressions
+
+class YearLessProperty:
+    
+    def __init__(self):
+        
+        self.label = 'Jahr vor'
+        
+    def build_subexpression(self, value):
+        
+        if value is None:
+            return True
+        try:
+            int_value = int(value)
+        except ValueError:
+            return True
+        
+        return and_(BROSCH_TABLE.c.jahr < int_value,
+                    BROSCH_TABLE.c.jahr != None)
+        
     
 class SignaturProperty:
     
@@ -408,6 +427,12 @@ class BroschSystematikFilterProperty(SystematikFilterProperty):
             pass
         
         return or_(*expressions)
+
+class ZeitschSystematikFilterProperty(SystematikFilterProperty):
+
+    def __init__(self):
+        
+        super().__init__([ZEITSCH_TABLE.c.systematik1, ZEITSCH_TABLE.c.systematik2, ZEITSCH_TABLE.c.systematik3])
 
 class GenericFilter:
 
@@ -493,7 +518,8 @@ class BroschFilter(GenericFilter):
                           TextFilterProperty([BROSCH_TABLE.c.ort], "Ort"),
                           TextFilterProperty([BROSCH_TABLE.c.name, BROSCH_TABLE.c.vorname, BROSCH_TABLE.c.visdp, BROSCH_TABLE.c.herausgeber], 'Name'),
                           BroschSystematikFilterProperty(),
-                          SignaturProperty()])        
+                          SignaturProperty(),
+                          YearLessProperty()])        
         self._sort_order = self.TITEL_ORDER
     
     def _get_sort_order(self):
@@ -616,7 +642,8 @@ class ZeitschriftenFilter(GenericFilter):
         
         super().__init__([TextFilterProperty([ZEITSCH_TABLE.c.titel, ZEITSCH_TABLE.c.untertitel], "Titel"),
                           TextFilterProperty([ZEITSCH_TABLE.c.ort], "Ort"),
-                          BroschSystematikFilterProperty()])        
+                          TextFilterProperty([ZEITSCH_TABLE.c.herausgeber, ZEITSCH_TABLE.c.spender], 'Name'),
+                          ZeitschSystematikFilterProperty()])        
         self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc()]
         self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc()]
         
