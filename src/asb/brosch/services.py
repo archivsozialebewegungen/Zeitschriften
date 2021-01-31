@@ -19,6 +19,57 @@ class MissingNumber(Exception):
     
     pass
 
+def parse_numbers(entry):
+
+    if entry == None:
+        return []
+    # remove trailing slashes
+    entry = re.sub(r"\s*/+\s*$", "", entry)
+        
+    result = []
+    entries = re.split("\s*,\s*", entry)
+    for element in entries:
+        matcher = re.match(r"\s*(\d+)\s*-\s*(\d+)\s*", element)
+        if matcher:
+            for n in range(int(matcher.group(1)),int(matcher.group(2))+1):
+                result.append("%s" % n)
+            continue
+        matcher = re.match(r"^\s*(.*?)\s*$", element)
+        if matcher:
+            result.append("%s" % matcher.group(1))
+            continue
+    return result
+
+def normalize_numbers(numbers):
+    
+    text = "%s.%d" % (numbers[0][0], numbers[0][1])
+    inrange = False
+    for i in range(1, len(numbers)):
+        last_number = current_number = 0
+        matcher = re.search("(\d+)", numbers[i-1][0])
+        if matcher:
+            last_number = int(matcher.group(1))
+        matcher = re.search("(\d+)", numbers[i][0])
+        if matcher:
+            current_number = int(matcher.group(1))
+            
+        if current_number == last_number + 1:
+            if inrange:
+                continue
+            else:
+                inrange = True
+        else:
+            if inrange:
+                text = "%s-%s.%d, %s.%d" % (text, numbers[i-1][0], numbers[i-1][1], numbers[i][0], numbers[i][1])
+                inrange = False
+            else:
+                text = "%s, %s.%d" % (text, numbers[i][0], numbers[i][1])
+    if inrange:
+        text = "%s-%s.%d" % (text, numbers[-1][0], numbers[-1][1])
+    
+    return text
+                      
+
 @singleton
 class ZeitschriftenService:
 
@@ -73,6 +124,15 @@ class ZeitschriftenService:
         
         jahrgang.nummern = self._add_number(jahrgang.nummern, nummer)
         self.dao.save(jahrgang)
+        
+    def get_bestand(self, zeitschrift):
+        
+        nummern = []
+        jahrgaenge = self.dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
+        for jahrgang in jahrgaenge:
+            for nummer in parse_numbers(jahrgang.nummern):
+                nummern.append((nummer, jahrgang.jahr))
+        return normalize_numbers(nummern)
         
     def _fetch_last_number_for_year(self, zeitschrift, jahr):
         
@@ -296,10 +356,11 @@ class ZDBService:
     query = property(lambda self: self.current_result.query)
     count = property(lambda self: self.current_result.total_records)
 
+@singleton
 class ZDBCatalog:
     
     def __init__(self):
-        
+
         self.hydra_url = "https://www.zeitschriftendatenbank.de/api/hydra"
         self.zdb_url = "https://zdb-katalog.de/title.xhtml"
         self.base_url = "https://ld.zdb-services.de/resource"
@@ -315,24 +376,20 @@ class ZDBCatalog:
 
         titel_info = self.fetch_title_information(zdb_id)
         result = requests.get(self.zdb_url, {'idn': titel_info.idn})
-        #print(result.text)
         parser = CatalogParser()
         parser.feed(result.text)
-        #print(parser.info)
+        
         return parser.info
 
 class TitleInfo():
     
-    ignore = ('Signatur', 'Fernleihe', 'Standort', 'URL', 'Lizenzinfomationen')
+    ignore = ('Signatur', 'Fernleihe', 'Bestand', 'Bestandslücken', 'Standort', 'URL', 'Lizenzinfomationen')
     
     def __init__(self):
         
         self.data = {}
         
     def add_to_data(self, key, value):
-        
-        if key in self.ignore:
-            return
         
         if key in self.data:
             self.data[key] += value
@@ -351,12 +408,22 @@ class TitleInfo():
         if 'Bestand' in self.data:
             return self.data['Bestand']
         else:
-            return "Keine Titelinformationen"
+            return "Keine Bestandsinformationen"
+        
+    def getASBBestandsLuecken(self):
+        
+        if 'Bestandslücken' in self.data:
+            return self.data['Bestandslücken']
+        else:
+            return "Keine Bestandslücken"
+    
         
     def __str__(self):
         
         result = ''
         for key in self.data:
+            if key in self.ignore:
+                continue
             result += "%s: %s\n" % (key, self.data[key])
         return result
 

@@ -7,7 +7,7 @@ from injector import inject, singleton, provider, Module
 
 from sqlalchemy.sql.schema import Table, MetaData, Column, ForeignKey, \
     UniqueConstraint
-from sqlalchemy.sql.sqltypes import Integer, String, Boolean
+from sqlalchemy.sql.sqltypes import Integer, String, Boolean, Date
 from sqlalchemy.sql.expression import insert, select, update, and_, or_
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.sql.functions import count, func
@@ -15,6 +15,7 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import IntegrityError
 import os
 import re
+from datetime import date
 
 BROSCH_METADATA = MetaData()
 
@@ -116,7 +117,10 @@ ZEITSCH_TABLE = Table(
     Column('vorlaeufer', String),
     Column('vorlaeufer_id', Integer, ForeignKey('zeitschriften.id')),
     Column('nachfolger', String),
-    Column('nachfolger_id', Integer, ForeignKey('zeitschriften.id'))
+    Column('nachfolger_id', Integer, ForeignKey('zeitschriften.id')),
+    Column('lastcheck', Date),
+    Column('lastchange', Date),
+    Column('lastsubmit', Date),
     )
 
 ZVORLAEUFER_TABLE = Table (
@@ -142,6 +146,7 @@ JAHRGANG_TABLE = Table(
     Column('jahr', Integer),
     Column('titel', String),
     Column('zid', Integer, ForeignKey('zeitschriften.id', ondelete="CASCADE")),
+    Column('lastchange', Date),
     UniqueConstraint('jahr', 'zid')
 )
 
@@ -266,6 +271,10 @@ class Zeitschrift:
         self.systematik1 = None
         self.systematik2 = None
         self.systematik3 = None
+        
+        self.lastcheck = None
+        self.lastchange = None
+        self.lastsubmit = None
 
 
 class Jahrgang:
@@ -301,6 +310,19 @@ class Jahrgang:
             return "%d [%s]" % (self.jahr, komplett)
         else:
             return "Jahr unbekannt"
+
+class BooleanFilterProperty:
+    
+    def __init__(self, column, label):
+        
+        self.label = label
+        self.column = column
+        
+    def build_subexpression(self, value):
+        
+        if value is None or value == False:
+            return None
+        return self.column == True
 
 class TextFilterProperty:
     
@@ -495,6 +517,15 @@ class GenericFilter:
         
         return self.property_values.keys()
     
+    def get_type(self, label):
+        
+        for property in self.properties:
+            if property.label == label:
+                if type(property) == BooleanFilterProperty:
+                    return bool
+                else:
+                    return str
+    
     def reset(self):
 
         for filter_property in self.properties:
@@ -643,7 +674,8 @@ class ZeitschriftenFilter(GenericFilter):
         super().__init__([TextFilterProperty([ZEITSCH_TABLE.c.titel, ZEITSCH_TABLE.c.untertitel], "Titel"),
                           TextFilterProperty([ZEITSCH_TABLE.c.ort], "Ort"),
                           TextFilterProperty([ZEITSCH_TABLE.c.herausgeber, ZEITSCH_TABLE.c.spender], 'Name'),
-                          ZeitschSystematikFilterProperty()])        
+                          ZeitschSystematikFilterProperty(),
+                          BooleanFilterProperty(ZEITSCH_TABLE.c.unimeldung, 'ZDB-Meldung')])        
         self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc()]
         self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc()]
         
@@ -1088,6 +1120,10 @@ class ZeitschriftenDao(GenericDao):
         self.join = ZEITSCH_TABLE
         self.filter = ZeitschriftenFilter()
 
+    def save(self, object):
+        object.lastchange = date.today()
+        return GenericDao.save(self, object)
+
     def _map_row(self, row, zeitschrift):
         
         zeitschrift.id = row[ZEITSCH_TABLE.c.id]
@@ -1130,6 +1166,10 @@ class ZeitschriftenDao(GenericDao):
         zeitschrift.systematik2 = row[ZEITSCH_TABLE.c.systematik2]
         zeitschrift.systematik3 = row[ZEITSCH_TABLE.c.systematik3]
         
+        zeitschrift.lastcheck = row[ZEITSCH_TABLE.c.lastcheck]
+        zeitschrift.lastchange = row[ZEITSCH_TABLE.c.lastchange]
+        zeitschrift.lastsubmit = row[ZEITSCH_TABLE.c.lastsubmit]
+        
         return zeitschrift
     
     def _collect_values(self, zeitschrift):
@@ -1166,7 +1206,10 @@ class ZeitschriftenDao(GenericDao):
             'vorlaeufer': zeitschrift.vorlaeufer,
             'vorlaeufer_id': zeitschrift.vorlaeufer_id,
             'nachfolger': zeitschrift.nachfolger,
-            'nachfolger_id': zeitschrift.nachfolger_id
+            'nachfolger_id': zeitschrift.nachfolger_id,
+            'lastcheck': zeitschrift.lastcheck,
+            'lastchange': zeitschrift.lastchange,
+            'lastsubmit': zeitschrift.lastsubmit,
         }
         
     def fetch_vorlaeufer(self, object):
@@ -1228,11 +1271,18 @@ class JahrgaengeDao(GenericDao):
         self.join = JAHRGANG_TABLE.join(ZEITSCH_TABLE, ZEITSCH_TABLE.c.id == JAHRGANG_TABLE.c.zid)
         self.filter = JahrgaengeFilter()
 
-    def fetch_jahrgaenge_for_zeitschrift(self, zeitschrift):
+    def save(self, object):
+        object.lastchange = date.today()
+        return GenericDao.save(self, object)
+
+    def fetch_jahrgaenge_for_zeitschrift(self, zeitschrift, desc=True):
 
         query = select([self.join]).\
-        where(JAHRGANG_TABLE.c.zid == zeitschrift.id).\
-        order_by(JAHRGANG_TABLE.c.jahr.desc())
+        where(JAHRGANG_TABLE.c.zid == zeitschrift.id)
+        if desc:
+            query = query.order_by(JAHRGANG_TABLE.c.jahr.desc())
+        if desc:
+            query = query.order_by(JAHRGANG_TABLE.c.jahr.asc())
         
         result = self.connection.execute(query)
         jahrgaenge = []

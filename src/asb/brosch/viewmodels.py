@@ -821,6 +821,19 @@ class ZeitschriftenPage(GenericPage):
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Verzeichnis:'), 3, 9, 1, 1)
         self.verzeichnis_label = Gtk.Label(halign=Gtk.Align.START)
         self.grid.attach(self.verzeichnis_label, 4, 9, 9, 1)
+        
+        # Row 10
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Letzte Änderung:'), 1, 10, 2, 1)
+        self.lastchange_label = Gtk.Label(halign=Gtk.Align.START)
+        self.grid.attach(self.lastchange_label, 3, 10, 2, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Letzte Prüfung:'), 5, 10, 2, 1)
+        self.lastcheck_label = Gtk.Label(halign=Gtk.Align.START)
+        self.grid.attach(self.lastcheck_label, 7, 10, 2, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Letzte Übermittlung:'), 9, 10, 2, 1)
+        self.lastsubmit_label = Gtk.Label(halign=Gtk.Align.START)
+        self.grid.attach(self.lastsubmit_label, 11, 10, 2, 1)
 
     def add_additional_buttons(self):
         
@@ -857,10 +870,14 @@ class ZeitschriftenPage(GenericPage):
         self.jdelete_button.connect("clicked", lambda button: self.presenter.delete_jahrgang())
         box1.pack_start(self.jdelete_button, True, True, 0)
 
-        self.jissue_button = Gtk.Button.new_with_label("Aktuelle Ausgabe hinzufügen")
+        self.jissue_button = Gtk.Button.new_with_label("Aktuelle Aus-\ngabe hinzufügen")
         self.jissue_button.connect("clicked", lambda button: self.presenter.add_current_issue())
-        box2.pack_start(self.jissue_button, True, True, 0)
+        box1.pack_start(self.jissue_button, True, True, 0)
 
+        self.zdb_button = Gtk.Button.new_with_label("Geprüft")
+        self.zdb_button.connect('clicked', lambda button: self.presenter.set_checked())
+        box2.pack_start(self.zdb_button, True, True, 0)
+        
         self.zdb_button = Gtk.Button.new_with_label("ZDB-Suche")
         self.zdb_button.connect('clicked', lambda button: self.presenter.search_zdb())
         box2.pack_start(self.zdb_button, True, True, 0)
@@ -868,8 +885,12 @@ class ZeitschriftenPage(GenericPage):
         self.zdb_data_button = Gtk.Button.new_with_label("ZDB-Daten")
         self.zdb_data_button.connect("clicked", lambda button: self.presenter.fetch_zdb_data())
         box2.pack_start(self.zdb_data_button, True, True, 0)
+
+        self.zdb_data_button = Gtk.Button.new_with_label("ZDB-Bestände")
+        self.zdb_data_button.connect("clicked", lambda button: self.presenter.fetch_zdb_bestand())
+        box2.pack_start(self.zdb_data_button, True, True, 0)
         
-        self.zdb_data_button = Gtk.Button.new_with_label("ZDB-Meldung")
+        self.zdb_data_button = Gtk.Button.new_with_label("ZDB-Übermittlung")
         self.zdb_data_button.connect("clicked", lambda button: self.presenter.submit_zdb_data())
         box2.pack_start(self.zdb_data_button, True, True, 0)
 
@@ -910,7 +931,32 @@ class ZeitschriftenPage(GenericPage):
     def _set_zdb_info(self, zdb_info):
         
         self.text_display_dialog.run(zdb_info, 'ZDB-Informationen')
+        
+    def _set_lastchange(self, lastchange):
+        
+        self._lastchange = lastchange
+        if lastchange is None:
+            self._set_string_label("???", self.lastchange_label)
+        else:
+            self._set_string_label(lastchange.strftime("%d. %B %Y"), self.lastchange_label)
             
+    def _set_lastcheck(self, lastcheck):
+        
+        self._lastcheck = lastcheck
+        if lastcheck is None:
+            self._set_string_label("???", self.lastcheck_label)
+        else:
+            self._set_string_label(lastcheck.strftime("%d. %B %Y"), self.lastcheck_label)
+            
+    def _set_lastsubmit(self, lastsubmit):
+        
+        self._lastsubmit = lastsubmit
+        if lastsubmit is None:
+            self._set_string_label("???", self.lastsubmit_label)
+        else:
+            self._set_string_label(lastsubmit.strftime("%d. %B %Y"), self.lastsubmit_label)
+            
+
     zdbid = property(lambda self: self._get_string_value(self.zdbid_entry),
                         lambda self, v: self._set_string_value(v, self.zdbid_entry))
     titel = property(lambda self: self._get_string_value(self.titel_entry),
@@ -973,6 +1019,9 @@ class ZeitschriftenPage(GenericPage):
                     lambda self, v: self._set_string_label(v, self.gruppe_label))
     jahrgaenge = property(lambda self: self._get_id_list(self.jahrgaenge_combobox),
                            lambda self, v: self._set_id_list(v, self.jahrgaenge_combobox))
+    lastchange = property(lambda self: self._lastchange, _set_lastchange)
+    lastcheck = property(lambda self: self._lastcheck, _set_lastcheck)
+    lastsubmit = property(lambda self: self._lastsubmit, _set_lastsubmit)
     
     # Dialog-Properties
     edited_jahrgang = property(_get_edited_jahrgang)

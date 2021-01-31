@@ -252,17 +252,23 @@ class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
 
     def _init_content_area(self, main_box, record_filter):
         
-        self._init_default_text_filters(main_box, record_filter)
+        self._init_default_filters(main_box, record_filter)
         self._init_combining(main_box)
         
     def _update_widgets(self, record_filter):
         
         for label in record_filter.labels:
             value = record_filter.get_property_value(label)
-            if value is None:
-                self.entries[label].set_text('')
+            if record_filter.get_type(label) == str:
+                if value is None:
+                    self.entries[label].set_text('')
+                else:
+                    self.entries[label].set_text(value)
             else:
-                self.entries[label].set_text(value)
+                if value is None or value == False:
+                    self.entries[label].set_active(False)
+                else:
+                    self.entries[label].set_active(True)
         if record_filter.combination == BroschFilter.COMBINATION_AND:
             self.and_checkbutton.set_active(True)
         else:
@@ -284,7 +290,7 @@ class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
         self.or_checkbutton.set_label("irgendeine Bedingung")
         combinebox.pack_start(self.or_checkbutton, False, False, 0)
         
-    def _init_default_text_filters(self, box, record_filter):
+    def _init_default_filters(self, box, record_filter):
         
         entry_grid = Gtk.Grid.new()
         box.add(entry_grid)
@@ -298,7 +304,10 @@ class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
         self.entries= {}
         for label in record_filter.labels:
             entry_grid.attach(Gtk.Label(halign=Gtk.Align.START, label=label), 1, current_row, 1, 1)
-            self.entries[label] = Gtk.Entry(width_chars=40)
+            if record_filter.get_type(label) == bool:
+                self.entries[label] = Gtk.CheckButton()
+            else:
+                self.entries[label] = Gtk.Entry(width_chars=40)
             entry_grid.attach(self.entries[label], 2, current_row, 1, 1)
             current_row += 1
 
@@ -312,10 +321,13 @@ class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
     def update_record_filter(self, record_filter):
         
         for label in record_filter.labels:
-            if self.entries[label].get_text() == '':
-                record_filter.set_property_value(label, None)
+            if record_filter.get_type(label) == str:
+                if self.entries[label].get_text() == '':
+                    record_filter.set_property_value(label, None)
+                else:
+                    record_filter.set_property_value(label, self.entries[label].get_text())
             else:
-                record_filter.set_property_value(label, self.entries[label].get_text())
+                record_filter.set_property_value(label, self.entries[label].get_active())
         return record_filter
 
     errormessage = property(lambda self: self._get_string_label(self.errormessage_label),

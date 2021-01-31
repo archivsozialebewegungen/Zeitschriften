@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from asb.brosch.services import ZeitschriftenService, MissingJahrgang,\
     MissingNumber, ZDBService, ZDBCatalog, MeldungsService
 import requests
+from datetime import date
     
 class GroupSelectionPresenter:
 
@@ -158,7 +159,8 @@ class GenericPresenter():
         except DataError as e:
             self.viewmodel.errormessage = e.message
             return
-        self.toggle_editing()
+        if self.viewmodel.mode == self.EDIT_MODE:
+            self.toggle_editing()
         self.update_derived_fields()
 
     def delete(self):
@@ -391,6 +393,21 @@ class ZeitschriftenPresenter(GenericPresenter):
         if self.viewmodel.zdbid is not None:
             self.viewmodel.zdb_info = "%s" % self.zdb_catalog.fetch_data(self.viewmodel.zdbid)
 
+    def fetch_zdb_bestand(self):
+        
+        if self.viewmodel.zdbid is not None:
+            info = self.zdb_catalog.fetch_data(self.viewmodel.zdbid)
+            self.viewmodel.zdb_info = "%s\n\nGemeldeter Bestand: %s\nGemeldete Bestandslücken: %s\n==============\nTatsächlicher Bestand: %s" % (
+                info.getTitel(),
+                info.getASBBestand(),
+                info.getASBBestandsLuecken(),
+                self.zeitschriften_service.get_bestand(self.viewmodel))
+            
+    def set_checked(self):
+        
+        self.viewmodel.lastcheck = date.today()
+        self.save()
+            
     def submit_zdb_data(self):
                 
         #<input type="hidden" name="tx_powermail_pi1[__referrer][@extension]" value="Powermail">
