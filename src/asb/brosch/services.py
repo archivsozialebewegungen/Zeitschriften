@@ -85,7 +85,7 @@ def format_number(number, jg):
 
 def normalize_numbers(numbers):
     
-    ranges = normalize_sequence(numbers, is_next= lambda a, b: int(re.search("(\d+)", a[0]).group(1)) + 1 == int(re.search("(\d+)", b[0]).group(1)))
+    ranges = normalize_sequence(numbers, is_next=is_next_for_numbers)
     
     text = ""
     for range in ranges:
@@ -112,6 +112,16 @@ def format_jahrgang_komplex(jg):
         return "%d" % jg.jahr
     else:
         return "%d.%d" % (jg.jahr - jg.erster_jg + 1, jg.jahr)
+    
+def is_next_for_numbers(a, b):
+    # input is a tuple of number and jahrgang
+    number_a = int(re.search("(\d+)", a[0]).group(1))
+    number_b = int(re.search("(\d+)", b[0]).group(1))
+    if number_a + 1 == number_b:
+        return True
+    if number_b != 1:
+        return False
+    return a[1].komplett
 
 @singleton
 class ZeitschriftenService:

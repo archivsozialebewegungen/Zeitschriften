@@ -396,12 +396,13 @@ class ZeitschriftenPresenter(GenericPresenter):
         
         if self.viewmodel.zdbid is not None:
             info = self.zdb_catalog.fetch_data(self.viewmodel.zdbid)
-            self.viewmodel.zdb_info = "%s\n\nGemeldeter Bestand: %s\nGemeldete Bestandslücken: %s\n==============\nTatsächlicher Bestand: %s\nBestandslücken: %s" % (
+            self.viewmodel.zdb_info = "%s\n\nGemeldeter Bestand: %s\nGemeldete Bestandslücken: %s\n==============\nTatsächlicher Bestand: %s\nBestandslücken: %s\nVollständiger Bestand: %s" % (
                 info.getTitel(),
                 info.getASBBestand(),
                 info.getASBBestandsLuecken(),
                 self.zeitschriften_service.get_bestand(self.viewmodel),
-                self.zeitschriften_service.get_bestandsluecken(self.viewmodel)
+                self.zeitschriften_service.get_bestandsluecken(self.viewmodel),
+                self.zeitschriften_service.get_bestand_vollstaendig(self.viewmodel)
                 )
             
     def set_checked(self):
