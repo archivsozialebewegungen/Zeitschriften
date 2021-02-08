@@ -19,6 +19,37 @@ class MissingNumber(Exception):
     
     pass
 
+def normalize_sequence(sequence, is_next= lambda a, b: a + 1 == b):
+    """
+    Produces a list of consecutive ranges. A range is an array with two
+    elements: The start element and the stop element.
+    
+    Whether a element in the sequence is the next element is determined by the
+    is_next function given as optional parameter.
+    """
+    
+    ranges = []
+    
+    if len(sequence) == 0:
+        return ranges
+    
+    current_range = [sequence[0], None]
+    for i in range(1, len(sequence)):
+        if is_next(sequence[i-1], sequence[i]):
+            # Next element is in sequence so we just carry on
+            continue
+        else:
+            # Current element is out of sequence, so we close the
+            # range and start a new one
+            current_range[1] = sequence[i-1]
+            ranges.append(current_range)
+            current_range = [sequence[i], None]
+    
+    current_range[1] = sequence[-1]
+    ranges.append(current_range)
+    
+    return ranges    
+
 def parse_numbers(entry):
 
     if entry == None:
@@ -51,43 +82,29 @@ def format_number(number, jg):
     
     return "%d.%d.%s" % (jahrgang, jg.jahr, number)
 
+
 def normalize_numbers(numbers):
     
-    text = "%s" % (format_number(numbers[0][0], numbers[0][1]))
-    inrange = False
-    for i in range(1, len(numbers)):
-        last_number = current_number = 0
-        last_jg = numbers[i-1][1]
-        current_jg = numbers[i][1]
-        matcher = re.search("(\d+)", numbers[i-1][0])
-        if matcher:
-            last_number = int(matcher.group(1))
-        matcher = re.search("(\d+)", numbers[i][0])
-        if matcher:
-            current_number = int(matcher.group(1))
-            
-        if current_number == last_number + 1:
-            if inrange:
-                continue
-            else:
-                inrange = True
-        else:
-            if inrange:
-                text = "%s-%s, %s" % (text, format_number(numbers[i-1][0], last_jg), format_number(numbers[i][0], current_jg))
-                inrange = False
-            else:
-                text = "%s, %s" % (text, format_number(numbers[i][0], current_jg))
-    if inrange:
-        text = "%s-%s" % (text, format_number(numbers[-1][0], last_jg))
+    ranges = normalize_sequence(numbers, is_next= lambda a, b: int(re.search("(\d+)", a[0]).group(1)) + 1 == int(re.search("(\d+)", b[0]).group(1)))
     
+    text = ""
+    for range in ranges:
+        if text != "":
+            text += ", "
+        if range[0] == range[1]:
+            text += format_number(range[0][0], range[0][1])
+        else:
+            text += format_number(range[0][0], range[0][1]) + "-" + format_number(range[1][0], range[1][1])
+
     return text
+    
 
 def format_jahrgang(jg):
     
     if jg.erster_jg is None or jg.erster_jg == 1:
-        return jg.jahr
+        return "%d" % jg.jahr
     else:
-        return jg.jahr - jg.erster_jg + 1
+        return "%d" % (jg.jahr - jg.erster_jg + 1)
                   
 def format_jahrgang_komplex(jg):
     
@@ -105,7 +122,9 @@ class ZeitschriftenService:
         self.dao = jahrgaenge_dao
         self.last_number_re = re.compile('.*?(\d+)[^0-9]*$')
         self.trim_re = re.compile('^\s*(.*?)\s*$')
-    '''
+
+    def fetch_new_number(self, zeitschrift):
+        '''
         Der Algorithmus sieht folgendermaßen aus:
         
         - Ermittle das aktuelle Jahr
@@ -122,8 +141,7 @@ class ZeitschriftenService:
             - Falls ja, hole die letzte Nummer aus dem vorheringen
               Jahrgang und liefere die Nummer um eins erhöht zurück
             - Falls nein, liefere 1 zurück
-    '''    
-    def fetch_new_number(self, zeitschrift):
+        '''    
         
         current_year = self._fetch_current_year()
         
@@ -160,47 +178,36 @@ class ZeitschriftenService:
                 nummern.append((nummer, jahrgang))
         return normalize_numbers(nummern)
 
+    def format_jahrgangsliste(self, jahrgaenge, format=format_jahrgang):
+
+        text = ""
+        ranges = normalize_sequence(jahrgaenge, is_next=lambda a, b: a.jahr + 1 == b.jahr)
+        for range in ranges:
+            if text != "":
+                text += ", "
+            if range[0] == range[1]:
+                text += format(range[0])
+            else:
+                text += format(range[0]) + "-" + format(range[1])
+        return text
+
     def get_bestand(self, zeitschrift):
         
         jahrgaenge = self.dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
-        nummern = format_jahrgang_komplex(jahrgaenge[0])
-        start_range = jahrgaenge[0].jahr 
-        for i in range(1, len(jahrgaenge)):
-            if start_range + 1 != jahrgaenge[i].jahr:
-                if jahrgaenge[i-1].jahr == start_range:
-                    nummern += ", %s" % format_jahrgang_komplex(jahrgaenge[i])
-                else:
-                    nummern = "%s-%s, %s" % (nummern, format_jahrgang_komplex(jahrgaenge[i-1]), format_jahrgang_komplex(jahrgaenge[i-1]))
-    
-        return nummern
+        return self.format_jahrgangsliste(jahrgaenge, format=format_jahrgang_komplex)
     
     def get_bestandsluecken(self, zeitschrift):
 
         jahrgaenge = self.dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
-        if len(jahrgaenge) == 0:
+        lueckenhaft = []
+        for jg in jahrgaenge:
+            if not jg.komplett:
+                lueckenhaft.append(jg)
+
+        if len(lueckenhaft) == 0:
             return ""
-        
-        luecken = ""
-        start_range = 0
-        for i in range(0, len(jahrgaenge)):
-            if jahrgaenge[i].komplett:
-                if start_range != 0 and start_range != jahrgaenge[i-1].jahr:
-                    luecken = "%s-%d" % (luecken, format_jahrgang(jahrgaenge[i-1]))
-                start_range = 0
-            else:
-                if start_range == 0:
-                    if luecken != "":
-                        luecken = "%s, " % luecken
-                    luecken = "%s%d" % (luecken, format_jahrgang(jahrgaenge[i]))
-                    start_range = jahrgaenge[i].jahr
-        
-        if start_range != 0 and start_range != jahrgaenge[-1].jahr:
-            luecken = luecken = "%s-%d" % (luecken, format_jahrgang(jahrgaenge[-1]))
-            
-        if luecken != "":
-            return "[L=%s]" % luecken
         else:
-            return ""
+            return "[L=%s]" % self.format_jahrgangsliste(lueckenhaft)
         
     def _fetch_last_number_for_year(self, zeitschrift, jahr):
         

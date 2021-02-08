@@ -400,7 +400,7 @@ class ZeitschriftenPresenter(GenericPresenter):
                 info.getTitel(),
                 info.getASBBestand(),
                 info.getASBBestandsLuecken(),
-                self.zeitschriften_service.get_bestand_vollstaendig(self.viewmodel),
+                self.zeitschriften_service.get_bestand(self.viewmodel),
                 self.zeitschriften_service.get_bestandsluecken(self.viewmodel)
                 )
             

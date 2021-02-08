@@ -1281,7 +1281,7 @@ class JahrgaengeDao(GenericDao):
         where(JAHRGANG_TABLE.c.zid == zeitschrift.id)
         if desc:
             query = query.order_by(JAHRGANG_TABLE.c.jahr.desc())
-        if desc:
+        else:
             query = query.order_by(JAHRGANG_TABLE.c.jahr.asc())
         
         result = self.connection.execute(query)
