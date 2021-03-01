@@ -115,8 +115,14 @@ def format_jahrgang_komplex(jg):
     
 def is_next_for_numbers(a, b):
     # input is a tuple of number and jahrgang
-    number_a = int(re.search("(\d+)", a[0]).group(1))
-    number_b = int(re.search("(\d+)", b[0]).group(1))
+    matcher = re.search("(\d+)", a[0])
+    if matcher is None:
+        return False
+    number_a = int(matcher.group(1))
+    matcher = re.search("(\d+)", b[0])
+    if matcher is None:
+        return False
+    number_b = int(matcher.group(1))
     if number_a + 1 == number_b:
         return True
     if number_b != 1:
