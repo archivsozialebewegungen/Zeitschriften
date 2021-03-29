@@ -215,6 +215,8 @@ class BroschPresenter(GenericPresenter):
         self.viewmodel.hauptsystematik = None
         self.viewmodel.systematik1 = None
         self.viewmodel.systematik2 = None
+        self.viewmodel.datei = None
+        self.viewmodel.digitalisiert = False
 
         self.update_derived_fields()
 
