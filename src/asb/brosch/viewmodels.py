@@ -205,9 +205,13 @@ class BroschPage(GenericPage):
         self.group_button.connect('clicked', lambda button: self.presenter.change_group())
         self.additional_button_box.pack_start(self.group_button, True, True, 0)
         
-        self.file_button = Gtk.Button.new_with_label("Datei ändern")
+        self.file_button = Gtk.Button.new_with_label("Dateizuordnung ändern")
         self.file_button.connect('clicked', lambda button: self.presenter.change_file())
         self.additional_button_box.pack_start(self.file_button, True, True, 0)
+
+        self.file_remove_button = Gtk.Button.new_with_label("Dateizuordnung löschen")
+        self.file_remove_button.connect('clicked', lambda button: self.presenter.remove_file())
+        self.additional_button_box.pack_start(self.file_remove_button, True, True, 0)
 
     def set_invisible_properties(self):
         
@@ -373,6 +377,10 @@ class BroschPage(GenericPage):
     def _get_file(self):
         
         return self.file_selection_dialog.run()
+
+    def _get_confirm_remove_file(self):
+        
+        return self.confirmation_dialog.run(text="Willst Du wirklich die Dateizuordnung löschen?")
             
     exemplare = property(lambda self: self._get_int_value(self.exemplare_entry, 'Anzahl'),
                          lambda self, v: self._set_int_value(v, self.exemplare_entry))
@@ -454,6 +462,7 @@ class BroschPage(GenericPage):
     new_group = property(_get_new_group)
     new_file = property(_get_file)
     init_values = property(_get_init_values)
+    confirm_remove_file = property(_get_confirm_remove_file)
     
 class GroupPage(GenericPage):
     

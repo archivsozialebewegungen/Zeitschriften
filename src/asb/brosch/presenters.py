@@ -259,6 +259,18 @@ class BroschPresenter(GenericPresenter):
             self.save()
             self.update_derived_fields()
             
+    def remove_file(self):
+        
+        if self.viewmodel.datei == None:
+            return
+        
+        if not self.viewmodel.confirm_remove_file:
+            return
+        
+        self.viewmodel.datei = None
+        self.viewmodel.digitalisiert = False
+        self.save()
+        self.update_derived_fields()
 
 class GroupPresenter(GenericPresenter):
     
