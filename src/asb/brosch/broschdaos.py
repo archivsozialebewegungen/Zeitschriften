@@ -79,6 +79,8 @@ BROSCH_TABLE = Table(
     Column('systematik2', String),
     Column('format', Integer, nullable=False),
     Column('doppel', Boolean, nullable=False),
+    Column('verschollen', Boolean),
+    Column('bemerkung', String),
     UniqueConstraint('hauptsystematik', 'format', 'nummer')
 )
 
@@ -212,6 +214,8 @@ class Brosch:
         self.hauptsystematik = None
         self.systematik1 = None
         self.systematik2 = None
+        self.bemerkung = None
+        self.verschollen = False
 
     def __str__(self):
         
@@ -913,6 +917,7 @@ class BroschDao(GenericDao):
             'nummer': brosch.nummer,
             'gruppen_id': brosch.gruppen_id,
             'beschaedigt': brosch.beschaedigt,
+            'verschollen': brosch.verschollen,
             'auflage': brosch.auflage,
             'format': brosch.format,
             'doppel': brosch.doppel,
@@ -920,7 +925,8 @@ class BroschDao(GenericDao):
             'datei': brosch.datei,
             'hauptsystematik': brosch.hauptsystematik,
             'systematik1': brosch.systematik1,
-            'systematik2': brosch.systematik2
+            'systematik2': brosch.systematik2,
+            'bemerkung': brosch.bemerkung
         }
         
     def _map_row(self, row, brosch):
@@ -943,6 +949,7 @@ class BroschDao(GenericDao):
         brosch.nummer = row[BROSCH_TABLE.c.nummer]
         brosch.gruppen_id = row[BROSCH_TABLE.c.gruppen_id]
         brosch.beschaedigt = row[BROSCH_TABLE.c.beschaedigt]
+        brosch.verschollen = row[BROSCH_TABLE.c.verschollen]
         brosch.auflage = row[BROSCH_TABLE.c.auflage]
         brosch.format = row[BROSCH_TABLE.c.format]
         brosch.doppel = row[BROSCH_TABLE.c.doppel]
@@ -951,6 +958,7 @@ class BroschDao(GenericDao):
         brosch.hauptsystematik = row[BROSCH_TABLE.c.hauptsystematik]
         brosch.systematik1 = row[BROSCH_TABLE.c.systematik1]
         brosch.systematik2 = row[BROSCH_TABLE.c.systematik2]
+        brosch.bemerkung = row[BROSCH_TABLE.c.bemerkung]
         return brosch
 
 

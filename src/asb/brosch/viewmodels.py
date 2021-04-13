@@ -304,6 +304,8 @@ class BroschPage(GenericPage):
         self.beschaedigt_checkbutton = Gtk.CheckButton(label="Beschädigt")
         self.grid.attach(self.beschaedigt_checkbutton, 6, 9, 2, 1)
     
+        self.verschollen_checkbutton = Gtk.CheckButton(label="Verschollen")
+        self.grid.attach(self.verschollen_checkbutton, 8, 9, 2, 1)
 
         # Row 10
 
@@ -326,15 +328,21 @@ class BroschPage(GenericPage):
         self.grid.attach(self.systematik2_entry, 8, 11, 5, 1)
 
         # Row 12
-        
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Gruppe:'), 1, 12, 1, 1)
-        self.gruppe_label = Gtk.Label(halign=Gtk.Align.START)
-        self.grid.attach(self.gruppe_label, 2, 12, 11, 1)
+
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Bemerkung:'), 1, 12, 1, 1)
+        self.bemerkung_entry = Gtk.Entry(width_chars=WIDTH_11)
+        self.grid.attach(self.bemerkung_entry, 2, 12, 11, 1)
 
         # Row 13
-        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Datei:'), 1, 13, 1, 1)
+        
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Gruppe:'), 1, 13, 1, 1)
+        self.gruppe_label = Gtk.Label(halign=Gtk.Align.START)
+        self.grid.attach(self.gruppe_label, 2, 13, 11, 1)
+
+        # Row 14
+        self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Datei:'), 1, 14, 1, 1)
         self.datei_label = Gtk.Label(halign=Gtk.Align.START)
-        self.grid.attach(self.datei_label, 2, 13, 11, 1)
+        self.grid.attach(self.datei_label, 2, 14, 11, 1)
         
     def _get_nummer(self):
         
@@ -440,6 +448,9 @@ class BroschPage(GenericPage):
     digitalisiert = property(lambda self: self._get_bool_value(self.digitalisiert_checkbutton),
                       lambda self, v: self._set_bool_value(v, self.digitalisiert_checkbutton))
 
+    verschollen = property(lambda self: self._get_bool_value(self.verschollen_checkbutton),
+                      lambda self, v: self._set_bool_value(v, self.verschollen_checkbutton))
+
     datei = property(lambda self: self._get_string_label(self.datei_label),
                         lambda self, v: self._set_string_label(v, self.datei_label))
 
@@ -452,6 +463,9 @@ class BroschPage(GenericPage):
     systematik2 = property(lambda self: self._get_string_value(self.systematik2_entry),
                       lambda self, v: self._set_string_value(v, self.systematik2_entry))
     
+    bemerkung = property(lambda self: self._get_string_value(self.bemerkung_entry),
+                      lambda self, v: self._set_string_value(v, self.bemerkung_entry))
+
     signatur = property(lambda self: self._get_string_label(self.signatur_label),
                         lambda self, v: self._set_string_label(v, self.signatur_label))
     

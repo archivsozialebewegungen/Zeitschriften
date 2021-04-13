@@ -209,6 +209,7 @@ class BroschPresenter(GenericPresenter):
         self.viewmodel.nummer = None
         self.viewmodel.gruppen_id = None
         self.viewmodel.beschaedigt = False
+        self.viewmodel.verschollen = False
         self.viewmodel.auflage = None
         self.viewmodel.format = None
         self.viewmodel.doppel = False
@@ -217,6 +218,7 @@ class BroschPresenter(GenericPresenter):
         self.viewmodel.systematik2 = None
         self.viewmodel.datei = None
         self.viewmodel.digitalisiert = False
+        self.viewmodel.bemerkung = None
 
         self.update_derived_fields()
 
