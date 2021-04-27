@@ -213,6 +213,11 @@ class BroschPage(GenericPage):
         self.file_remove_button.connect('clicked', lambda button: self.presenter.remove_file())
         self.additional_button_box.pack_start(self.file_remove_button, True, True, 0)
 
+        self.switch_format_button = Gtk.Button.new_with_label("Format tauschen")
+        self.switch_format_button.connect('clicked', lambda button: self.presenter.switch_format())
+        self.additional_button_box.pack_start(self.switch_format_button, True, True, 0)
+
+
     def set_invisible_properties(self):
         
         super().set_invisible_properties()
@@ -390,6 +395,14 @@ class BroschPage(GenericPage):
         
         return self.confirmation_dialog.run(text="Willst Du wirklich die Dateizuordnung löschen?")
             
+    def _get_confirm_switch_format(self):
+        
+        question = "Willst Du wirklich das Format auf A4 ändern?"
+        if self.format == 1:
+            question = "Willst Du wirklich das Format auf A5 ändern?"
+        
+        return self.confirmation_dialog.run(text=question)
+
     exemplare = property(lambda self: self._get_int_value(self.exemplare_entry, 'Anzahl'),
                          lambda self, v: self._set_int_value(v, self.exemplare_entry))
     
@@ -477,6 +490,7 @@ class BroschPage(GenericPage):
     new_file = property(_get_file)
     init_values = property(_get_init_values)
     confirm_remove_file = property(_get_confirm_remove_file)
+    confirm_switch_format = property(_get_confirm_switch_format)
     
 class GroupPage(GenericPage):
     

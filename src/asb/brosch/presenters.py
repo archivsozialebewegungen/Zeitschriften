@@ -273,6 +273,20 @@ class BroschPresenter(GenericPresenter):
         self.viewmodel.digitalisiert = False
         self.save()
         self.update_derived_fields()
+        
+    def switch_format(self):
+        
+        if not self.viewmodel.confirm_switch_format:
+            return 
+        
+        new_format = self.dao.A4
+        if self.viewmodel.format == self.dao.A4:
+            new_format = self.dao.A5
+        new_number = self.dao.fetch_next_number(self.viewmodel.hauptsystematik, new_format)
+        self.viewmodel.format = new_format
+        self.viewmodel.nummer = new_number
+        self.save()
+        self.update_derived_fields
 
 class GroupPresenter(GenericPresenter):
     

@@ -8,7 +8,7 @@ from injector import inject, singleton, provider, Module
 from sqlalchemy.sql.schema import Table, MetaData, Column, ForeignKey, \
     UniqueConstraint
 from sqlalchemy.sql.sqltypes import Integer, String, Boolean, Date
-from sqlalchemy.sql.expression import insert, select, update, and_, or_
+from sqlalchemy.sql.expression import insert, select, update, and_, or_, text
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.sql.functions import count, func
 from sqlalchemy.engine import create_engine
@@ -680,16 +680,16 @@ class ZeitschriftenFilter(GenericFilter):
                           TextFilterProperty([ZEITSCH_TABLE.c.herausgeber, ZEITSCH_TABLE.c.spender], 'Name'),
                           ZeitschSystematikFilterProperty(),
                           BooleanFilterProperty(ZEITSCH_TABLE.c.unimeldung, 'ZDB-Meldung')])        
-        self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc()]
-        self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc()]
+        self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc(), ZEITSCH_TABLE.c.id.asc()]
+        self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc(), ZEITSCH_TABLE.c.id.desc()]
         
     def get_next_expression(self, zeitschrift):
         
-        return ZEITSCH_TABLE.c.titel > zeitschrift.titel
+        return (ZEITSCH_TABLE.c.titel == zeitschrift.titel and ZEITSCH_TABLE.c.id > zeitschrift.id) or ZEITSCH_TABLE.c.titel > zeitschrift.titel
     
     def get_previous_expression(self, zeitschrift):
         
-        return ZEITSCH_TABLE.c.titel < zeitschrift.titel
+        return (ZEITSCH_TABLE.c.titel == zeitschrift.titel and ZEITSCH_TABLE.c.id < zeitschrift.id) or ZEITSCH_TABLE.c.titel < zeitschrift.titel
     
 class PageObject:
     
@@ -864,7 +864,7 @@ class BroschDao(GenericDao):
         self.table = BROSCH_TABLE
         self.join = BROSCH_TABLE
 
-    def fetch_next_number(self, hauptsystematik: int, format: int):
+    def fetch_next_number_old(self, hauptsystematik: int, format: int):
         
         max = self.connection.execute(select([func.max(BROSCH_TABLE.c.nummer)]).where(
             and_(BROSCH_TABLE.c.hauptsystematik == hauptsystematik,
@@ -873,6 +873,18 @@ class BroschDao(GenericDao):
             return 1
         else:
             return max + 1
+
+    def fetch_next_number(self, hauptsystematik: int, format: int):
+        
+        request = text("""select min(b.nummer + 1)
+            from broschueren as b
+            left outer join broschueren as b2 on b.nummer + 1 = b2.nummer and b.format = b2.format and b.hauptsystematik = b2.hauptsystematik
+            where b.hauptsystematik = :hauptsystematik and b.format = :format and b2.nummer is null""")
+        next = self.connection.execute(request, hauptsystematik=hauptsystematik, format=format).scalar() 
+        if next is None:
+            return 1
+        else:
+            return next
 
     def _insert(self, brosch):
         

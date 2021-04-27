@@ -34,6 +34,18 @@ class TestBroschDao(unittest.TestCase):
         brosch.nummer = self.number
         self.number += 1
         return self.broschdao.save(brosch)
+    
+    def testNewNumber(self):
+        
+        self._save_brosch("Eins")
+        self._save_brosch("Zwei")
+        self._save_brosch("Drei")
+        
+        self.assertEqual(4, self.broschdao.fetch_next_number(0, 1))
+
+        self.broschdao.delete(2)
+        
+        self.assertEqual(2, self.broschdao.fetch_next_number(0, 1))
         
     def testInsert(self):
         
@@ -79,7 +91,7 @@ class TestBroschDao(unittest.TestCase):
         self._save_brosch('Another title')
         self._save_brosch('My title')
 
-        self.broschdao.filter._set_title_filter('y')
+        self.broschdao.filter.set_property_value("Titel", "y")
         
         brosch = self.broschdao.fetch_first(Brosch())
         self.assertEqual('My title', brosch.titel)
