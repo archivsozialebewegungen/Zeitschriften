@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from asb.brosch.services import ZeitschriftenService, MissingJahrgang,\
     MissingNumber, ZDBService, ZDBCatalog, MeldungsService
 from datetime import date
+from asb.brosch.reporting import BroschReportGenerator
     
 class GroupSelectionPresenter:
 
@@ -184,10 +185,11 @@ class GenericPresenter():
 class BroschPresenter(GenericPresenter):
 
     @inject
-    def __init__(self, brosch_dao: BroschDao, group_dao: GroupDao):
+    def __init__(self, brosch_dao: BroschDao, group_dao: GroupDao, report_generator: BroschReportGenerator):
         
         self.dao = brosch_dao
         self.group_dao = group_dao
+        self.report_generator = report_generator
 
     def reset(self):
         
@@ -287,7 +289,19 @@ class BroschPresenter(GenericPresenter):
         self.viewmodel.nummer = new_number
         self.save()
         self.update_derived_fields
+        
+    def create_list(self):
 
+        new_file_name = self.viewmodel.list_file
+        if new_file_name is None:
+            return
+        
+        brosch_filter, title = self.viewmodel.list_parameters
+        if title is None or title == '':
+            self.report_generator.create_report(brosch_filter, new_file_name)
+        else:
+            self.report_generator.create_report(brosch_filter, new_file_name, title)
+        
 class GroupPresenter(GenericPresenter):
     
     @inject

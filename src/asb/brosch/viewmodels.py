@@ -15,7 +15,8 @@ from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     JahrgangEditDialogWrapper, ZeitschriftenFilterDialogWrapper,\
     ZeitschDirectoryChooserDialogWrapper, BroschSearchDialogWrapper,\
     GroupFilterDialogWrapper, ZeitschriftenSearchDialogWrapper,\
-    GroupSearchDialogWrapper, ZDBSearchDialogWrapper, TextDisplayDialogWrapper
+    GroupSearchDialogWrapper, ZDBSearchDialogWrapper, TextDisplayDialogWrapper,\
+    BroschListDialogWrapper, BroschListFileDialogWrapper
 
 WIDTH_11 = 55
 WIDTH_5 = 20
@@ -188,12 +189,16 @@ class BroschPage(GenericPage):
                  group_selection_dialog: GroupSelectionDialogWrapper,
                  brosch_init_dialog: BroschInitDialogWrapper,
                  filter_dialog: BroschFilterDialogWrapper,
+                 brosch_list_dialog: BroschListDialogWrapper,
                  file_selection_dialog: BroschFileChooserDialogWrapper,
+                 list_file_dialog: BroschListFileDialogWrapper,
                  search_dialog: BroschSearchDialogWrapper):
 
         self.group_selection_dialog = group_selection_dialog
         self.brosch_init_dialog = brosch_init_dialog
         self.file_selection_dialog = file_selection_dialog
+        self.brosch_list_dialog = brosch_list_dialog
+        self.list_file_dialog = list_file_dialog
         
         super().__init__(presenter, confirmation_dialog, filter_dialog, search_dialog)
 
@@ -217,6 +222,9 @@ class BroschPage(GenericPage):
         self.switch_format_button.connect('clicked', lambda button: self.presenter.switch_format())
         self.additional_button_box.pack_start(self.switch_format_button, True, True, 0)
 
+        self.create_list_button = Gtk.Button.new_with_label("Liste erstellen")
+        self.create_list_button.connect('clicked', lambda button: self.presenter.create_list())
+        self.additional_button_box.pack_start(self.create_list_button, True, True, 0)
 
     def set_invisible_properties(self):
         
@@ -390,6 +398,14 @@ class BroschPage(GenericPage):
     def _get_file(self):
         
         return self.file_selection_dialog.run()
+    
+    def _get_list_file(self):
+        
+        return self.list_file_dialog.run()
+    
+    def _get_list_parameters(self):
+        
+        return self.brosch_list_dialog.run()
 
     def _get_confirm_remove_file(self):
         
@@ -488,6 +504,8 @@ class BroschPage(GenericPage):
     # Dialog properties
     new_group = property(_get_new_group)
     new_file = property(_get_file)
+    list_file = property(_get_list_file)
+    list_parameters = property(_get_list_parameters)
     init_values = property(_get_init_values)
     confirm_remove_file = property(_get_confirm_remove_file)
     confirm_switch_format = property(_get_confirm_switch_format)

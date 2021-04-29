@@ -371,6 +371,29 @@ class BroschFilterDialog(GenericFilterDialog):
         
     sort_order = property(_get_sort_order)
 
+class BroschListDialog(BroschFilterDialog):
+
+    def _init_content_area(self, main_box, record_filter):
+        
+        self._init_title_entry(main_box)
+        super()._init_content_area(main_box, record_filter)
+
+    def _init_title_entry(self, main_box):
+        
+        label = Gtk.Label("Listentitel:")
+        self.title_entry = Gtk.Entry()
+        
+        title_box = Gtk.HBox()
+        title_box.pack_start(label, True, True, 0)
+        title_box.pack_start(self.title_entry, True, True, 0)
+        main_box.pack_start(title_box, True, True, 0)
+        
+    def _get_list_title(self):
+        
+        return self.title_entry.get_text()
+        
+    list_title = property(_get_list_title)
+        
 
 class GenericFilterDialogWrapper():
 
@@ -421,6 +444,50 @@ class BroschFilterDialogWrapper(GenericFilterDialogWrapper):
         record_filter.sort_order = dialog.sort_order
         return record_filter
 
+@singleton
+class BroschListDialogWrapper(GenericFilterDialogWrapper):
+    
+    @inject
+    def __init__(self, presenter: BroschFilterDialogPresenter):
+        
+        self.presenter = presenter
+        self.title = "Liste erzeugen"
+        self.dialogclass = BroschListDialog
+        self.filterclass = BroschFilter
+
+    def run(self):
+        
+        dialog = self.dialogclass(self.presenter.get_current_filter(), self.title)
+
+        response_ok = False        
+        while not response_ok:
+            return_value = None
+            response = dialog.run()
+            dialog.errormessage = ''
+            if response == BroschFilterDialog.CANCEL:
+                response_ok = True
+            elif response == BroschFilterDialog.APPLY:
+                return_value = self.build_filter_object(dialog)
+                if self.presenter.does_filter_return_results(return_value):
+                    response_ok = True
+                else:
+                    dialog.errormessage = "Filter liefert keine Daten zurück!"
+            elif response == BroschFilterDialog.CLEAR:
+                return_value = BroschFilter()
+                response_ok = True
+    
+        list_title = dialog.list_title            
+        dialog.destroy()
+        
+        return return_value, list_title
+
+    def build_filter_object(self, dialog):
+
+        record_filter = super().build_filter_object(dialog)        
+        record_filter.sort_order = dialog.sort_order
+        
+        return record_filter
+    
 @singleton
 class ZeitschriftenFilterDialogWrapper(GenericFilterDialogWrapper):
     
@@ -481,6 +548,25 @@ class BroschFileChooserDialogWrapper:
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
              Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
         dialog.set_current_folder(os.environ['BROSCH_DIR'])
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            file_path = dialog.get_filename()
+        elif response == Gtk.ResponseType.CANCEL:
+            file_path = None
+
+        dialog.destroy()
+        
+        return file_path
+
+@singleton    
+class BroschListFileDialogWrapper:
+    
+    def run(self):
+        dialog = Gtk.FileChooserDialog("Bitte LaTeX-Datei für die Ausgabe angeben", None,
+            Gtk.FileChooserAction.SAVE,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
 
         response = dialog.run()
         if response == Gtk.ResponseType.OK:

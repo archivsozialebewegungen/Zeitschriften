@@ -370,14 +370,11 @@ class SystematikFilterProperty:
     def build_subexpression(self, value):
         
         if value is None:
-            return True
+            return None
         
         return or_(*self._get_systematik_expressions(value))
 
     def _get_systematik_expressions(self, value):
-        
-        if value is None:
-            return []
         
         expressions = []
         for column in self.columns:
@@ -397,11 +394,11 @@ class YearLessProperty:
     def build_subexpression(self, value):
         
         if value is None:
-            return True
+            return None
         try:
             int_value = int(value)
         except ValueError:
-            return True
+            return None
         
         return and_(BROSCH_TABLE.c.jahr < int_value,
                     BROSCH_TABLE.c.jahr != None)
@@ -417,7 +414,7 @@ class SignaturProperty:
     def build_subexpression(self, value):
         
         if value is None:
-            return True
+            return None
         
         m = self.signature_re.match(value)
         if m:
