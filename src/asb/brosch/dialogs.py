@@ -328,6 +328,9 @@ class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
                     record_filter.set_property_value(label, self.entries[label].get_text())
             else:
                 record_filter.set_property_value(label, self.entries[label].get_active())
+                
+        record_filter.combination = self._get_combination()
+        
         return record_filter
 
     errormessage = property(lambda self: self._get_string_label(self.errormessage_label),
