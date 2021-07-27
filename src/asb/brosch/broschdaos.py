@@ -377,12 +377,15 @@ class SystematikFilterProperty:
     def _get_systematik_expressions(self, value):
         
         expressions = []
+        split_values = re.split('\\s*:\\s*',value)
         for column in self.columns:
-            expressions.append(
-                or_(
-                    column == value,
-                    column.ilike('%s.%%' % value))
-            )
+            for sub_value in split_values:
+                expressions.append(
+                    or_(
+                        column == sub_value,
+                        column.ilike('%s.%%' % sub_value)
+                    )
+                )
         return expressions
 
 class YearLessProperty:
@@ -546,7 +549,7 @@ class BroschFilter(GenericFilter):
     
     def __init__(self):
 
-        super().__init__([TextFilterProperty([BROSCH_TABLE.c.titel, BROSCH_TABLE.c.untertitel], "Titel"),
+        super().__init__([TextFilterProperty([BROSCH_TABLE.c.titel, BROSCH_TABLE.c.untertitel, BROSCH_TABLE.c.thema], "Titel"),
                           TextFilterProperty([BROSCH_TABLE.c.ort], "Ort"),
                           TextFilterProperty([BROSCH_TABLE.c.name, BROSCH_TABLE.c.vorname, BROSCH_TABLE.c.visdp, BROSCH_TABLE.c.herausgeber], 'Name'),
                           BroschSystematikFilterProperty(),
@@ -757,6 +760,7 @@ class GenericDao:
             order_by(*page_object.filter.sort_order_asc).\
             offset(page_object.current_page * page_object.page_size).\
             limit(page_object.page_size)
+        print(stmt)
         result = self.connection.execute(stmt)
         objects = []
         for row in result.fetchall():
