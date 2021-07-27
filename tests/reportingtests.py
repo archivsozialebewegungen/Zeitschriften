@@ -37,15 +37,6 @@ class ReportingTest(unittest.TestCase):
         table_generator = self.injector.get(ZeitschriftenTableGenerator)
         table_generator.generate()
 
-    def test_systematik_tex(self):    
-        engine = create_engine('postgresql://archivar:archivar@mossmann2:5432/archiv')
-        connection = engine.connect()
-        dao = SystematikDao(connection)
-        tree = dao.fetch_tree(SystematikTexTree)
-        tex_file = open("/tmp/systemetik.tex", "w")
-        tex_file.write("%s" % tree)
-        tex_file.close()
-
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
