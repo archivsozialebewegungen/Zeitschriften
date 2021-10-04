@@ -14,6 +14,7 @@ from asb.brosch.presenters import GroupSelectionPresenter,\
 from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter,\
     ZeitschriftenFilter, GruppenFilter
 import os
+from asb.brosch.services import MeldungsService
 
 class GroupSelectionDialog(Gtk.Dialog, ViewModelMixin):
     
@@ -152,7 +153,7 @@ class BroschInitDialogWrapper:
     
     def run(self):
         
-        dialog = BroschInitDialog()
+        dialog = ZDBMeldungDialog()
         return_value = None
         while return_value is None:
             result = dialog.run()
@@ -164,6 +165,114 @@ class BroschInitDialogWrapper:
                 except DataError as e:
                     dialog.errormessage = e.message
         dialog.destroy()
+        return return_value
+
+class ZDBMeldungDialog(Gtk.Dialog, ViewModelMixin):
+
+    CANCEL = 1
+    OK = 2
+    
+    def __init__(self, meldung):
+        
+        self.meldung = meldung
+        Gtk.Dialog.__init__(self, title="ZDB Meldung", flags=0)
+        self.add_buttons(
+            Gtk.STOCK_CANCEL, BroschInitDialog.CANCEL,
+            Gtk.STOCK_OK, BroschInitDialog.OK
+        )
+
+        self.set_default_size(450, 300)
+
+        box = self.get_content_area()
+
+        grid = Gtk.Grid.new()
+        grid.set_row_spacing(5)
+        grid.set_column_spacing(5)
+        box.add(grid)
+ 
+        label = Gtk.Label()
+        label.set_markup("<b>Bitte Daten vor dem Absenden prüfen:</b>")
+        grid.attach(label, 0, 0, 6, 2)
+              
+        label = Gtk.Label(halign=Gtk.Align.START)
+        label.set_markup("<b>Titel:</b>")
+        grid.attach(label, 0, 3, 1, 1)
+        grid.attach(Gtk.Label(meldung.titel, halign=Gtk.Align.START), 1, 3, 5, 1)
+        
+        if meldung.zdb_nummer == "":
+            label = Gtk.Label(halign=Gtk.Align.START)
+            label.set_markup("<b>Ort:</b>")
+            grid.attach(label, 0, 4, 1, 1)
+            grid.attach(Gtk.Label(meldung.ort, halign=Gtk.Align.START), 1, 4, 2, 1)
+            
+            label = Gtk.Label(halign=Gtk.Align.START)
+            label.set_markup("<b>Verlag:</b>")
+            grid.attach(label, 4, 4, 1, 1)
+            grid.attach(Gtk.Label(meldung.verlag, halign=Gtk.Align.START), 5, 4, 2, 1)
+        else:
+            label = Gtk.Label(halign=Gtk.Align.START)
+            label.set_markup("<b>ZDB Nummer:</b>")
+            grid.attach(label, 0, 4, 1, 1)
+            grid.attach(Gtk.Label(meldung.zdb_nummer, halign=Gtk.Align.START), 1, 4, 5, 1)
+        
+        label = Gtk.Label(halign=Gtk.Align.START)
+        label.set_markup("<b>Bestand:</b>")
+        grid.attach(label, 0, 5, 1, 1)
+        grid.attach(Gtk.Label(meldung.bestand, halign=Gtk.Align.START), 1, 5, 5, 1)
+
+        label = Gtk.Label(halign=Gtk.Align.START)
+        label.set_markup("<b>Lücken:</b>")
+        grid.attach(label, 0, 6, 1, 1)
+        grid.attach(Gtk.Label(meldung.luecken, halign=Gtk.Align.START), 1, 6, 5, 1)
+
+        label = Gtk.Label(halign=Gtk.Align.START)
+        label.set_markup("<b>Laufend:</b>")
+        grid.attach(label, 0, 7, 1, 1)
+        grid.attach(Gtk.Label(meldung.laufend, halign=Gtk.Align.START), 1, 7, 1, 1)
+        
+        label = Gtk.Label(halign=Gtk.Align.START)
+        label.set_markup("<b>Abschluss:</b>")
+        grid.attach(label, 2, 7, 1, 1)
+        grid.attach(Gtk.Label(meldung.abschluss, halign=Gtk.Align.START), 3, 7, 1, 1)
+        
+        label = Gtk.Label(halign=Gtk.Align.START)
+        label.set_markup("<b>ISSN:</b>")
+        grid.attach(label, 4, 7, 1, 1)
+        grid.attach(Gtk.Label(meldung.issn, halign=Gtk.Align.START), 5, 7, 1, 1)
+
+        label = Gtk.Label(halign=Gtk.Align.START)
+        label.set_markup("<b>Bemerkung:</b>")
+        grid.attach(label, 0, 8, 1, 1)
+        grid.attach(Gtk.Label(meldung.bemerkung, halign=Gtk.Align.START), 1, 8, 5, 1)
+        
+        self.show_all()
+
+
+@singleton  
+class ZDBMeldungDialogWrapper:
+    
+    
+    @inject
+    def __init__(self, meldungs_service: MeldungsService):
+        
+        self.meldungs_service = meldungs_service
+    
+    def run(self, meldung):
+        
+        dialog = ZDBMeldungDialog(meldung)
+        
+        done = False
+        return_value = None
+        while not done:
+            result = dialog.run()
+            if result == ZDBMeldungDialog.CANCEL:
+                done = True
+            elif result == ZDBMeldungDialog.OK:
+                done = True
+                return_value = dialog.meldung
+        
+        dialog.destroy()
+
         return return_value
 
 class TextDisplayDialog(Gtk.Dialog):

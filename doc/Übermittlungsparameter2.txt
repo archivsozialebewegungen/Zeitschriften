@@ -1,0 +1,38 @@
+tx_powermail_pi1[field][__hp]: 
+tx_powermail_pi1[field][ejournal]: 
+tx_powermail_pi1[field][gtk]: Geschenk
+tx_powermail_pi1[__referrer][@action]: form
+tx_powermail_pi1[field][kostenlose_testversion]: 
+tx_powermail_pi1[field][titel]: Test
+tx_powermail_pi1[__trustedProperties]: a:2:{s:5:"field";a:35:{s:5:"sigel";i:1;s:16:"sachbearbeiterin";i:1;s:5:"email";i:1;s:5:"titel";i:1;s:10:"zdb_nummer";i:1;s:6:"verlag";i:1;s:3:"ort";i:1;s:4:"issn";i:1;s:7:"bestand";i:1;s:7:"laufend";i:1;s:3:"gtk";i:1;s:7:"luecken";i:1;s:14:"abbestellungen";i:1;s:9:"abschluss";i:1;s:22:"erscheinen_eingestellt";i:1;s:14:"titelaenderung";a:1:{i:0;i:1;}s:15:"alter_titel_bis";i:1;s:14:"neuer_titel_ab";i:1;s:11:"neuer_titel";i:1;s:12:"neuer_verlag";i:1;s:21:"neuer_erscheinungsort";i:1;s:9:"neue_issn";i:1;s:8:"ejournal";a:1:{i:0;i:1;}s:22:"kostenlose_testversion";a:1:{i:0;i:1;}s:13:"nutzungsdauer";i:1;s:22:"bonus_zur_druckausgabe";a:1:{i:0;i:1;}s:36:"ersatz_fuer_abbestellte_druckausgabe";a:1:{i:0;i:1;}s:37:"ersatz_fuer_eingestellte_druckausgabe";a:1:{i:0;i:1;}s:3:"url";i:1;s:6:"lizenz";i:1;s:23:"erlaeuterung_zur_lizenz";i:1;s:16:"zugangskontrolle";i:1;s:33:"erlaeuterung_zur_zugangskontrolle";i:1;s:9:"bemerkung";i:1;s:4:"__hp";i:1;}s:4:"mail";a:1:{s:4:"form";i:1;}}b4d129ada203fc13e38c061c61e61445a3954ca5
+tx_powermail_pi1[field][ersatz_fuer_eingestellte_druckausgabe]: 
+tx_powermail_pi1[field][verlag]: 
+tx_powermail_pi1[field][ersatz_fuer_abbestellte_druckausgabe]: 
+tx_powermail_pi1[field][sachbearbeiterin]: Michael Koltan
+tx_powermail_pi1[__referrer][@request]: a:4:{s:10:"@extension";s:9:"Powermail";s:11:"@controller";s:4:"Form";s:7:"@action";s:4:"form";s:7:"@vendor";s:7:"In2code";}49304093f87aeb947a8dda3e27c04ce8b387b6c2
+tx_powermail_pi1[__referrer][arguments]: YTowOnt9e468550f7c0d94f360fbfc7a38a114799fe9762f
+tx_powermail_pi1[field][titelaenderung]: 
+tx_powermail_pi1[field][erscheinen_eingestellt]: 
+tx_powermail_pi1[field][bonus_zur_druckausgabe]: 
+tx_powermail_pi1[field][neuer_verlag]: Neuer Verlag
+tx_powermail_pi1[field][abbestellungen]: 
+tx_powermail_pi1[field][alter_titel_bis]: Kein test
+tx_powermail_pi1[field][issn]: 
+tx_powermail_pi1[__referrer][@controller]: Form
+tx_powermail_pi1[field][abschluss]: 
+tx_powermail_pi1[__referrer][@vendor]: In2code
+tx_powermail_pi1[field][neue_issn]: Neue ISSN
+tx_powermail_pi1[field][neuer_titel]: Neuer Titel
+tx_powermail_pi1[field][zdb_nummer]: 
+tx_powermail_pi1[__referrer][@extension]: Powermail
+tx_powermail_pi1[field][bestand]: 16.1978
+tx_powermail_pi1[field][laufend]: Ja. Laufender Bezug.
+tx_powermail_pi1[field][neuer_erscheinungsort]: Neuer Ort
+tx_powermail_pi1[mail][form]: 8
+tx_powermail_pi1[field][bemerkung]: 
+tx_powermail_pi1[field][neuer_titel_ab]: 13.1999
+tx_powermail_pi1[field][luecken]: 
+tx_powermail_pi1[field][ort]: 
+tx_powermail_pi1[field][sigel]: Frei 202
+tx_powermail_pi1[field][titelaenderung][]: Es gab eine Titeländerung.
+tx_powermail_pi1[field][email]: info@archivsozialbewegungen.de
