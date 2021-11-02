@@ -33,12 +33,14 @@ class BroschWindow(Gtk.Window):
         Gtk.Window.__init__(self, title="Broschüren")
         self.connect("destroy", Gtk.main_quit)
         self.set_border_width(5)
-        self.set_default_size(420, 200)
+        self.set_default_size(980, 1200)
 
         self.add_buttons()
         
         self.notebook = Gtk.Notebook()
-        self.add(self.notebook)
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.add(self.notebook)
+        self.add(scrolled_window)
 
         self.notebook.append_page(brosch_page, Gtk.Label(label='Broschüren'))
         self.notebook.append_page(group_page, Gtk.Label(label='Gruppen'))
