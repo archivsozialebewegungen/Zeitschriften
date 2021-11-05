@@ -590,7 +590,7 @@ class CatalogParser(HTMLParser):
             return
         
         clazz = self.find_class(attrs)    
-        if 'class' is not None:
+        if clazz is not None:
             if clazz == 'td-key':
                 self.key_flag = True
             if clazz == 'td-val':
@@ -629,11 +629,14 @@ class CatalogParser(HTMLParser):
 @singleton
 class MeldungsService:
     
-    url = "http://ub.uni-freiburg.de/nutzen-leihen/praesenzbestaende/zeitschriften/informationen-fuer-bibliothekspersonal/meldung-von-periodika/?tx_powermail_pi1%5Baction%5D=create&tx_powermail_pi1%5Bcontroller%5D=Form&cHash=e0bd57b847bea24cf5ab64b0ae43eeaf#c16814"
-    #url = "http://localhost/cgi-bin/test.pl"
+    url = "http://localhost/cgi-bin/test.pl"
     
     @inject
     def __init__(self, zeitschriften_service: ZeitschriftenService, zdb_catalog: ZDBCatalog, zeitschriften_dao: ZeitschriftenDao, jahrgaenge_dao: JahrgaengeDao):
+        
+        self.base_url = "https://www.ub.uni-freiburg.de/nutzen-leihen/praesenzbestaende/zeitschriften/informationen-fuer-bibliothekspersonal/meldung-von-periodika"
+        #self.submit_url = self.base_url + "/?tx_powermail_pi1%5Baction%5D=create&tx_powermail_pi1%5Bcontroller%5D=Form&cHash=e0bd57b847bea24cf5ab64b0ae43eeaf#c16814"
+        self.submit_url = "http://localhost/cgi-bin/test.pl"
         
         self.zeitschriften_dao = zeitschriften_dao
         self.zdb_catalog = zdb_catalog
@@ -677,10 +680,17 @@ class MeldungsService:
         
         return True
     
+    def fetch_cookies(self):
+        r = requests.get(self.base_url)
+        for key in r.cookies:
+            print("%s: %s" % (key, r.cookies[key]))
+        return r.cookies
+    
     def submit_meldung(self, meldung):
-        
+
         submit_fields = self._get_submit_fields(meldung)
-        r = requests.post(self.url, data=submit_fields)
+        cookies = self.fetch_cookies()     
+        r = requests.post(self.submit_url, cookies=cookies, data=submit_fields)
         print(r.status_code, r.reason)
 
     def _get_submit_fields(self, meldung):
