@@ -153,7 +153,7 @@ class BroschInitDialogWrapper:
     
     def run(self):
         
-        dialog = ZDBMeldungDialog()
+        dialog = BroschInitDialog()
         return_value = None
         while return_value is None:
             result = dialog.run()
@@ -177,8 +177,8 @@ class ZDBMeldungDialog(Gtk.Dialog, ViewModelMixin):
         self.meldung = meldung
         Gtk.Dialog.__init__(self, title="ZDB Meldung", flags=0)
         self.add_buttons(
-            Gtk.STOCK_CANCEL, BroschInitDialog.CANCEL,
-            Gtk.STOCK_OK, BroschInitDialog.OK
+            Gtk.STOCK_CANCEL, ZDBMeldungDialog.CANCEL,
+            Gtk.STOCK_OK, ZDBMeldungDialog.OK
         )
 
         self.set_default_size(450, 300)
