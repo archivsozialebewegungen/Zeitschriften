@@ -4,13 +4,16 @@ Created on 27.04.2021
 @author: michael
 '''
 from asb.brosch.broschdaos import BroschFilter, BroschDao, PageObject, Brosch,\
-    DataError
+    DataError, ZeitschriftenDao, Zeitschrift, ZeitschriftenFilter
 from injector import singleton, inject
 from datetime import date
+import os
 
 def tex_sanitizing(text: str) -> str:
     
     text = text.replace("&", "\\&")
+    text = text.replace('(?<=\s)"', ",,")
+    text = text.replace('"', "``")
     return text
 
 @singleton
@@ -113,3 +116,51 @@ class BroschReportGenerator:
        
         file.write("\\end{document}\n")
         file.close()
+
+class ZeitschriftenTableGenerator:
+    
+    @inject
+    def __init__(self, zeitsch_dao: ZeitschriftenDao):
+        
+        self.zeitsch_dao = zeitsch_dao
+        
+    def generate(self):
+        
+        page_object = PageObject(self.zeitsch_dao, Zeitschrift, ZeitschriftenFilter())
+        
+        try:
+            self.zeitsch_dao.init_page_object(page_object)
+        except DataError:
+            return
+        
+
+        table_body = ""
+
+        while True:
+            try:
+                for zeitsch in page_object.objects:
+                    entry = """                                    <tr>
+                                        <td>@Titel@
+                                        </td>
+                                        <td>@Kategorie@
+                                        </td>
+                                    </tr>
+"""
+                    table_body += ""
+                    entry = entry.replace('@Titel@', zeitsch.titel)
+                    if zeitsch.systematik1 is None:
+                        entry = entry.replace('@Kategorie@', "Kein Systematikpunkt")
+                    else:
+                        entry = entry.replace('@Kategorie@', zeitsch.systematik1)
+                    table_body += entry
+                page_object.fetch_next()
+            except DataError:
+                break
+        
+        template_file_name = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates', 'zeitsch_table.html')
+        with open(template_file_name) as f:
+            template = f.read()
+        template = template.replace('@tablebody@', table_body)
+        
+        with open('/tmp/tables.html', "w") as f:
+            f.write(template)

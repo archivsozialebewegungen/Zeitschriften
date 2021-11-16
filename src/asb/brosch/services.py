@@ -19,7 +19,66 @@ class MissingNumber(Exception):
     
     pass
 
-def normalize_sequence(sequence, is_next= lambda a, b: a + 1 == b):
+class JournalNumber:
+    
+    def __init__(self, text_representation, jahrgang=None):
+        
+        self.text_representation = text_representation
+        
+        parts = text_representation.split("/")
+        self.start = int(parts[0])
+        self.end = int(parts[-1])
+        self.jahrgang = jahrgang
+        
+    def __str__(self):
+        
+        if self.jahrgang == None:
+            return self.text_representation
+        
+        jahrgangs_no = None
+        if self.jahrgang.erster_jg is not None and self.jahrgang.erster_jg != 1:
+            jahrgangs_no = self.jahrgang.jahr - self.jahrgang.erster_jg + 1
+    
+        if jahrgangs_no is None:
+            return "%d,%s" % (self.jahrgang.jahr, self.text_representation)
+    
+        return "%d.%d,%s" % (jahrgangs_no, self.jahrgang.jahr, self.text_representation)
+    
+    def __eq__(self, other):
+        
+        if other.jahrgang is None and self.jahrgang is None:
+            return self.text_representation == other.text_representation
+        if other.jahrgang is None or self.jahrgang is None:
+            return False
+        
+        return self.jahrgang.jahr == other.jahrgang.jahr and self.text_representation == other.text_representation
+        
+class JournalNumberRange:
+    
+    def __init__(self, start_number, end_number):
+        
+        self.start_number = start_number
+        self.end_number = end_number
+        
+    def __str__(self):
+        
+        if self.start_number == self.end_number:
+            return "%s" % self.start_number
+        return "%s-%s" % (self.start_number, self.end_number)
+
+def is_next_for_numbers(a: JournalNumber, b: JournalNumber):
+    """
+    To use as is_next function in normalize_sequence for longer number chains
+    """
+    if a.end + 1 == b.start:
+        return True
+    if b.start != 1:
+        return False
+    if a.jahrgang is None:
+        return False
+    return a.jahrgang.komplett
+    
+def normalize_sequence(sequence, is_next=lambda a, b: a.end + 1 == b.start):
     """
     Produces a list of consecutive ranges. A range is an array with two
     elements: The start element and the stop element.
@@ -50,54 +109,82 @@ def normalize_sequence(sequence, is_next= lambda a, b: a + 1 == b):
     
     return ranges    
 
-def parse_numbers(entry):
 
-    if entry == None:
+def cleanup_number_entry(entry):
+    '''
+    Remove everything that is not a nmuber, a comma or a slash
+    '''
+    entry = re.sub(r"[^0-9,/-]", "", entry)
+    # There may be still trailing stuff, remove it
+    entry = re.sub(r"[^0-9]+$", "", entry)
+    
+    return entry
+
+def replace_ranges(entry):
+    
+    range_re = r".*?((\d+)-(\d+)).*"
+    matcher = re.match(range_re, entry)
+    while matcher:
+        number_range = matcher.group(1)
+        start = int(matcher.group(2))
+        end = int(matcher.group(3))
+        new_range = ""
+        delimiter = ""
+        for n in range(start, end + 1):
+            new_range += "%s%d" % (delimiter, n)
+            delimiter = ","
+        entry = entry.replace(number_range, new_range)
+        matcher = re.match(range_re, entry)
+    return entry
+
+def extract_numbers(entry, jahrgang=None):
+
+    if entry == None or entry == "":
         return []
-    # remove trailing slashes
-    entry = re.sub(r"\s*/+\s*$", "", entry)
+    
+    # remove all charactes not part of a numeric list
+    entry = cleanup_number_entry(entry)
+    entry = replace_ranges(entry)
+    
+    numbers = []
+    for number in entry.split(","):
+        numbers.append(JournalNumber(number, jahrgang))
+
+    return numbers
+
+def extract_ranges(entry, jahrgang=None):
+
+    return normalize_sequence(extract_numbers(entry, jahrgang))
+
+def normalize_entry_full(entry):
+
+    numbers = extract_numbers(entry)
+    
+    normalized_entry = ""
+    delimiter = ""
+    for number in numbers:
+        normalized_entry += "%s%s" % (delimiter, number)
         
-    result = []
-    entries = re.split("\s*,\s*", entry)
-    for element in entries:
-        matcher = re.match(r"\s*(\d+)\s*-\s*(\d+)\s*", element)
-        if matcher:
-            for n in range(int(matcher.group(1)),int(matcher.group(2))+1):
-                result.append("%s" % n)
-            continue
-        matcher = re.match(r"^\s*(.*?)\s*$", element)
-        if matcher:
-            result.append("%s" % matcher.group(1))
-            continue
-    return result
+    return normalized_entry
 
-def format_number(number, jg):
-    
-    jahrgang = None
-    if jg.erster_jg is not None and jg.erster_jg != 1:
-        jahrgang = jg.jahr - jg.erster_jg + 1
-    
-    if jahrgang is None:
-        return "%d.%s" % (jg.jahr, number)
-    
-    return "%d.%d.%s" % (jahrgang, jg.jahr, number)
+def ranges_to_string(ranges):
 
-
-def normalize_numbers(numbers):
-    
-    ranges = normalize_sequence(numbers, is_next=is_next_for_numbers)
-    
-    text = ""
-    for range in ranges:
-        if text != "":
-            text += ", "
-        if range[0] == range[1]:
-            text += format_number(range[0][0], range[0][1])
+    normalized_entry = ""
+    delimiter = ""
+    for number_ranges in ranges:
+        if number_ranges[0] == number_ranges[1]:
+            normalized_entry += "%s%s" % (delimiter, number_ranges[0])
         else:
-            text += format_number(range[0][0], range[0][1]) + "-" + format_number(range[1][0], range[1][1])
-
-    return text
+            normalized_entry += "%s%s-%s" % (delimiter, number_ranges[0], number_ranges[1])
+        delimiter = ";"
     
+    return normalized_entry
+    
+def normalize_entry_condensed(entry):
+
+    ranges = extract_ranges(entry)
+
+    return ranges_to_string(ranges)
 
 def format_jahrgang(jg):
     
@@ -113,22 +200,6 @@ def format_jahrgang_komplex(jg):
     else:
         return "%d.%d" % (jg.jahr - jg.erster_jg + 1, jg.jahr)
     
-def is_next_for_numbers(a, b):
-    # input is a tuple of number and jahrgang
-    matcher = re.search("(\d+)", a[0])
-    if matcher is None:
-        return False
-    number_a = int(matcher.group(1))
-    matcher = re.search("(\d+)", b[0])
-    if matcher is None:
-        return False
-    number_b = int(matcher.group(1))
-    if number_a + 1 == number_b:
-        return True
-    if number_b != 1:
-        return False
-    return a[1].komplett
-
 @singleton
 class ZeitschriftenService:
 
@@ -190,9 +261,12 @@ class ZeitschriftenService:
         nummern = []
         jahrgaenge = self.dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
         for jahrgang in jahrgaenge:
-            for nummer in parse_numbers(jahrgang.nummern):
-                nummern.append((nummer, jahrgang))
-        return normalize_numbers(nummern)
+            for nummer in extract_numbers(jahrgang.nummern, jahrgang):
+                nummern.append(nummer)
+        
+        ranges = normalize_sequence(nummern, is_next_for_numbers)
+        
+        return ranges_to_string(ranges)
 
     def format_jahrgangsliste(self, jahrgaenge, format=format_jahrgang):
 
@@ -200,7 +274,7 @@ class ZeitschriftenService:
         ranges = normalize_sequence(jahrgaenge, is_next=lambda a, b: a.jahr + 1 == b.jahr)
         for range in ranges:
             if text != "":
-                text += ", "
+                text += ";"
             if range[0] == range[1]:
                 text += format(range[0])
             else:
@@ -322,81 +396,25 @@ class QueryResult:
     
     query = property(lambda self: self.json_result['freetextQuery'])
 
-@singleton
-class MeldungsService:
-    
-    #url = "http://ub.uni-freiburg.de/nutzen-leihen/praesenzbestaende/zeitschriften/informationen-fuer-bibliothekspersonal/meldung-von-periodika/?tx_powermail_pi1%5Baction%5D=create&tx_powermail_pi1%5Bcontroller%5D=Form&cHash=e0bd57b847bea24cf5ab64b0ae43eeaf#c16814"
-    url = "http://localhost/cgi-bin/test.pl"
-    
-    laufend = ["Ja. Laufender Bezug.", 
-               "Nein. Kein laufender Bezug."]
-    gtk = ["", "Geschenk", "Tausch", "Kauf"]
-    
-    @inject
-    def __init__(self, zeitschriften_dao: ZeitschriftenDao, jahrgaenge_dao: JahrgaengeDao):
-        
-        self.zeitschriften_dao = zeitschriften_dao
-        self.jahrgaenge_dao = jahrgaenge_dao
-        
-    def submit_zeitschrift(self, zeitsch_id):
-        
-        submit_fields = self._get_submit_fields(zeitsch_id)
-        r = requests.post(self.url, data=submit_fields)
-        print(r.status_code, r.reason)
+class ZDBMeldung:
 
-    def _get_submit_fields(self, zeitsch_id):
-        
-        fields = self._init_submit_fields()
-        
-        zeitschrift = self.zeitschriften_dao.fetch_by_id(zeitsch_id, Zeitschrift())
-        
-        fields["tx_powermail_pi1[field][titel]"] = zeitschrift.titel
-        if zeitschrift.zdbid is None:
-            fields["tx_powermail_pi1[field][zdb_nummer]"] = "" 
-            fields["tx_powermail_pi1[field][verlag]"] = zeitschrift.verlag
-            fields["tx_powermail_pi1[field][ort]"] = zeitschrift.ort
-            fields["tx_powermail_pi1[field][issn]"] = ""
-        else:
-            fields["tx_powermail_pi1[field][zdb_nummer]"] = zeitschrift.zdbid
-             
-        fields["tx_powermail_pi1[field][bestand]"] = "TODO"
-        if zeitschrift.laufend:
-            fields["tx_powermail_pi1[field][laufend]"] = self.laufend[0]
-        else:
-            fields["tx_powermail_pi1[field][laufend]"] = self.laufend[1]
-        fields["tx_powermail_pi1[field][luecken]"] = "TODO"
-        fields["tx_powermail_pi1[field][abschluss]"] = ["TODO", "TODO"]
-        
-        return fields
+    laufend_mapping = ["Ja. Laufender Bezug.", 
+                       "Nein. Kein laufender Bezug."]
     
-    def _init_submit_fields(self):
+    def __init__(self):
         
-        return {"tx_powermail_pi1[__referrer][@extension]": "Powermail",
-                "tx_powermail_pi1[__referrer][@vendor]": "In2code",
-                "tx_powermail_pi1[__referrer][@controller]": "Form",
-                "tx_powermail_pi1[__referrer][@action]" : "form",
-                "tx_powermail_pi1[__referrer][arguments]" : "YTowOnt9e468550f7c0d94f360fbfc7a38a114799fe9762f",
-                "tx_powermail_pi1[__referrer][@request]" : "a:4:{s:10:&quot;@extension&quot;;s:9:&quot;Powermail&quot;;s:11:&quot;@controller&quot;;s:4:&quot;Form&quot;;s:7:&quot;@action&quot;;s:4:&quot;form&quot;;s:7:&quot;@vendor&quot;;s:7:&quot;In2code&quot;;}49304093f87aeb947a8dda3e27c04ce8b387b6c2",
-                "tx_powermail_pi1[__trustedProperties]" : "a:2:{s:5:&quot;field&quot;;a:35:{s:5:&quot;sigel&quot;;i:1;s:16:&quot;sachbearbeiterin&quot;;i:1;s:5:&quot;email&quot;;i:1;s:5:&quot;titel&quot;;i:1;s:10:&quot;zdb_nummer&quot;;i:1;s:6:&quot;verlag&quot;;i:1;s:3:&quot;ort&quot;;i:1;s:4:&quot;issn&quot;;i:1;s:7:&quot;bestand&quot;;i:1;s:7:&quot;laufend&quot;;i:1;s:3:&quot;gtk&quot;;i:1;s:7:&quot;luecken&quot;;i:1;s:14:&quot;abbestellungen&quot;;i:1;s:9:&quot;abschluss&quot;;i:1;s:22:&quot;erscheinen_eingestellt&quot;;i:1;s:14:&quot;titelaenderung&quot;;a:1:{i:0;i:1;}s:15:&quot;alter_titel_bis&quot;;i:1;s:14:&quot;neuer_titel_ab&quot;;i:1;s:11:&quot;neuer_titel&quot;;i:1;s:12:&quot;neuer_verlag&quot;;i:1;s:21:&quot;neuer_erscheinungsort&quot;;i:1;s:9:&quot;neue_issn&quot;;i:1;s:8:&quot;ejournal&quot;;a:1:{i:0;i:1;}s:22:&quot;kostenlose_testversion&quot;;a:1:{i:0;i:1;}s:13:&quot;nutzungsdauer&quot;;i:1;s:22:&quot;bonus_zur_druckausgabe&quot;;a:1:{i:0;i:1;}s:36:&quot;ersatz_fuer_abbestellte_druckausgabe&quot;;a:1:{i:0;i:1;}s:37:&quot;ersatz_fuer_eingestellte_druckausgabe&quot;;a:1:{i:0;i:1;}s:3:&quot;url&quot;;i:1;s:6:&quot;lizenz&quot;;i:1;s:23:&quot;erlaeuterung_zur_lizenz&quot;;i:1;s:16:&quot;zugangskontrolle&quot;;i:1;s:33:&quot;erlaeuterung_zur_zugangskontrolle&quot;;i:1;s:9:&quot;bemerkung&quot;;i:1;s:4:&quot;__hp&quot;;i:1;}s:4:&quot;mail&quot;;a:1:{s:4:&quot;form&quot;;i:1;}}b4d129ada203fc13e38c061c61e61445a3954ca5",
-                
-                "tx_powermail_pi1[field][sigel]": "Frei 202",  
-                "tx_powermail_pi1[field][sachbearbeiterin]": "Michael Koltan",  
-                "tx_powermail_pi1[field][email]": "info@archivsozialebewegungen.de",
-                
-                "tx_powermail_pi1[field][titel]": "",  
-                "tx_powermail_pi1[field][zdb_nummer]": "",  
-                "tx_powermail_pi1[field][verlag]": "",
-                "tx_powermail_pi1[field][ort]": "",
-                "tx_powermail_pi1[field][issn]": "",
-                "tx_powermail_pi1[field][bestand]": "",
-                "tx_powermail_pi1[field][laufend]": self.laufend[0],
-                "tx_powermail_pi1[field][gtk]": self.gtk[0],
-                "tx_powermail_pi1[field][luecken]": "",
-                "tx_powermail_pi1[field][abbestellungen]": "",
-                "tx_powermail_pi1[field][abschluss]": [],
-                  }
+        self.titel = ""
+        self.zdb_nummer = ""
+        self.verlag = ""
+        self.ort = ""
+        self.issn = ""
+        self.bestand = ""
+        self.luecken = ""
+        self.abschluss = ""
+        self.laufend = self.laufend_mapping[1]
+        self.bemerkung = ""
         
-    
+
 class ZDBService:
     
     def __init__(self):
@@ -456,7 +474,7 @@ class ZDBCatalog:
         self.zdb_url = "https://zdb-katalog.de/title.xhtml"
         self.base_url = "https://ld.zdb-services.de/resource"
         
-    def fetch_title_information(self, zdbid):
+    def _fetch_raw_title_information(self, zdbid):
         
         payload = {'q': 'zdbid=%s' % zdbid}
         result = requests.get(self.hydra_url, params=payload).json()
@@ -465,7 +483,7 @@ class ZDBCatalog:
     
     def fetch_data(self, zdb_id):
 
-        titel_info = self.fetch_title_information(zdb_id)
+        titel_info = self._fetch_raw_title_information(zdb_id)
         result = requests.get(self.zdb_url, {'idn': titel_info.idn})
         parser = CatalogParser()
         parser.feed(result.text)
@@ -475,6 +493,8 @@ class ZDBCatalog:
 class TitleInfo():
     
     ignore = ('Signatur', 'Fernleihe', 'Bestand', 'Bestandslücken', 'Standort', 'URL', 'Lizenzinfomationen')
+    
+    KEINE_BESTANDSINFOS = "Keine Bestandsinformationen"
     
     def __init__(self):
         
@@ -499,7 +519,7 @@ class TitleInfo():
         if 'Bestand' in self.data:
             return self.data['Bestand']
         else:
-            return "Keine Bestandsinformationen"
+            return self.KEINE_BESTANDSINFOS
         
     def getASBBestandsLuecken(self):
         
@@ -570,7 +590,7 @@ class CatalogParser(HTMLParser):
             return
         
         clazz = self.find_class(attrs)    
-        if 'class' is not None:
+        if clazz is not None:
             if clazz == 'td-key':
                 self.key_flag = True
             if clazz == 'td-val':
@@ -605,3 +625,144 @@ class CatalogParser(HTMLParser):
                     self.info.add_to_data(self.key, "\n")
                     self.linebreak = False
                 self.info.add_to_data(self.key, data.strip())
+
+@singleton
+class MeldungsService:
+    
+    url = "http://localhost/cgi-bin/test.pl"
+    
+    @inject
+    def __init__(self, zeitschriften_service: ZeitschriftenService, zdb_catalog: ZDBCatalog, zeitschriften_dao: ZeitschriftenDao, jahrgaenge_dao: JahrgaengeDao):
+        
+        self.base_url = "https://www.ub.uni-freiburg.de/nutzen-leihen/praesenzbestaende/zeitschriften/informationen-fuer-bibliothekspersonal/meldung-von-periodika"
+        #self.submit_url = self.base_url + "/?tx_powermail_pi1%5Baction%5D=create&tx_powermail_pi1%5Bcontroller%5D=Form&cHash=e0bd57b847bea24cf5ab64b0ae43eeaf#c16814"
+        self.submit_url = "http://localhost/cgi-bin/test.pl"
+        
+        self.zeitschriften_dao = zeitschriften_dao
+        self.zdb_catalog = zdb_catalog
+        self.jahrgaenge_dao = jahrgaenge_dao
+        self.zeitschriften_service = zeitschriften_service
+
+    def init_zdbmeldung(self, zeitsch_id):
+
+        meldung = ZDBMeldung()
+        
+        zeitschrift = self.zeitschriften_dao.fetch_by_id(zeitsch_id, Zeitschrift())
+        
+        meldung.titel = zeitschrift.titel
+        if zeitschrift.zdbid is None:
+            meldung.verlag = zeitschrift.verlag
+            meldung.ort = zeitschrift.ort
+        else:
+            meldung.zdb_nummer = zeitschrift.zdbid
+        
+        meldung.bestand = self.zeitschriften_service.get_bestand(zeitschrift)
+        meldung.luecken = self.zeitschriften_service.get_bestandsluecken(zeitschrift)
+
+        if zeitschrift.laufend:
+            meldung.laufend = meldung.laufend_mapping[0]
+        
+        if self.already_reported(zeitschrift):
+            meldung.bemerkung = "Wir haben unsere Bestände geprüft und\nDiskrepanzen zur aktuellen Meldung gefunden."
+        else:
+            meldung.bemerkung = "Neue Meldung einer bislang nicht gemeldeten\nZeitschrift."
+            
+        return meldung
+    
+    def already_reported(self, zeitschrift: Zeitschrift):
+        
+        if zeitschrift.zdbid is None:
+            return False
+        
+        title_information = self.zdb_catalog.fetch_data(zeitschrift.zdbid)
+        if title_information.getASBBestand() == TitleInfo.KEINE_BESTANDSINFOS:
+            return False
+        
+        return True
+    
+    def fetch_cookies(self):
+        r = requests.get(self.base_url)
+        for key in r.cookies:
+            print("%s: %s" % (key, r.cookies[key]))
+        return r.cookies
+    
+    def submit_meldung(self, meldung):
+
+        submit_fields = self._get_submit_fields(meldung)
+        cookies = self.fetch_cookies()     
+        r = requests.post(self.submit_url, cookies=cookies, data=submit_fields)
+        print(r.status_code, r.reason)
+
+    def _get_submit_fields(self, meldung):
+        
+        fields = self._init_submit_fields()
+        
+        fields["tx_powermail_pi1[field][titel]"] = meldung.titel
+        fields["tx_powermail_pi1[field][zdb_nummer]"] = meldung.zdb_nummer
+        fields["tx_powermail_pi1[field][verlag]"] = meldung.verlag
+        fields["tx_powermail_pi1[field][ort]"] = meldung.ort
+        fields["tx_powermail_pi1[field][issn]"] = meldung.issn
+             
+        fields["tx_powermail_pi1[field][bestand]"] = meldung.bestand
+        fields["tx_powermail_pi1[field][laufend]"] = meldung.laufend
+        fields["tx_powermail_pi1[field][bemerkung]"] = meldung.bemerkung
+        fields["tx_powermail_pi1[field][luecken]"] = meldung.luecken
+        fields["tx_powermail_pi1[field][abschluss]"] = meldung.abschluss
+        
+        return fields
+    
+    def _init_submit_fields(self):
+        
+        return {
+                # Verwaltungsfelder
+                "tx_powermail_pi1[__referrer][@extension]": "Powermail",
+                "tx_powermail_pi1[__referrer][@vendor]": "In2code",
+                "tx_powermail_pi1[__referrer][@controller]": "Form",
+                "tx_powermail_pi1[__referrer][@action]" : "form",
+                "tx_powermail_pi1[__referrer][arguments]" : "YTowOnt9e468550f7c0d94f360fbfc7a38a114799fe9762f",
+                "tx_powermail_pi1[__referrer][@request]" : 'a:4:{s:10:"@extension";s:9:"Powermail";s:11:"@controller";s:4:"Form";s:7:"@action";s:4:"form";s:7:"@vendor";s:7:"In2code";}49304093f87aeb947a8dda3e27c04ce8b387b6c2',
+                "tx_powermail_pi1[__trustedProperties]" : 'a:2:{s:5:"field";a:35:{s:5:"sigel";i:1;s:16:"sachbearbeiterin";i:1;s:5:"email";i:1;s:5:"titel";i:1;s:10:"zdb_nummer";i:1;s:6:"verlag";i:1;s:3:"ort";i:1;s:4:"issn";i:1;s:7:"bestand";i:1;s:7:"laufend";i:1;s:3:"gtk";i:1;s:7:"luecken";i:1;s:14:"abbestellungen";i:1;s:9:"abschluss";i:1;s:22:"erscheinen_eingestellt";i:1;s:14:"titelaenderung";a:1:{i:0;i:1;}s:15:"alter_titel_bis";i:1;s:14:"neuer_titel_ab";i:1;s:11:"neuer_titel";i:1;s:12:"neuer_verlag";i:1;s:21:"neuer_erscheinungsort";i:1;s:9:"neue_issn";i:1;s:8:"ejournal";a:1:{i:0;i:1;}s:22:"kostenlose_testversion";a:1:{i:0;i:1;}s:13:"nutzungsdauer";i:1;s:22:"bonus_zur_druckausgabe";a:1:{i:0;i:1;}s:36:"ersatz_fuer_abbestellte_druckausgabe";a:1:{i:0;i:1;}s:37:"ersatz_fuer_eingestellte_druckausgabe";a:1:{i:0;i:1;}s:3:"url";i:1;s:6:"lizenz";i:1;s:23:"erlaeuterung_zur_lizenz";i:1;s:16:"zugangskontrolle";i:1;s:33:"erlaeuterung_zur_zugangskontrolle";i:1;s:9:"bemerkung";i:1;s:4:"__hp";i:1;}s:4:"mail";a:1:{s:4:"form";i:1;}}b4d129ada203fc13e38c061c61e61445a3954ca5',
+                "tx_powermail_pi1[mail][form]": "8",
+
+                # Konstante, statische oder von uns nicht benutzte Felder
+                "tx_powermail_pi1[field][sigel]": "Frei 202",  
+                "tx_powermail_pi1[field][sachbearbeiterin]": "Michael Koltan",  
+                "tx_powermail_pi1[field][email]": "info@archivsozialebewegungen.de",
+                "tx_powermail_pi1[field][__hp]": "",
+                "tx_powermail_pi1[field][ersatz_fuer_abbestellte_druckausgabe]": "",
+                "tx_powermail_pi1[field][kostenlose_testversion]": "",
+                "tx_powermail_pi1[field][ejournal]": "",
+                "tx_powermail_pi1[field][bonus_zur_druckausgabe]": "",
+                "tx_powermail_pi1[field][ersatz_fuer_eingestellte_druckausgabe]": "",
+                # Abbestellung voraussichtlich mit Band / Jahrgang
+                "tx_powermail_pi1[field][abbestellungen]": "",
+                # Letzter vorhandener Band / Jahrgang
+                "tx_powermail_pi1[field][abschluss]": "",
+                # Erscheinen eingestellt mit Band / Jahrgang
+                "tx_powermail_pi1[field][erscheinen_eingestellt]": "",
+                
+                # Zu füllende Felder
+                "tx_powermail_pi1[field][titel]": "",  
+                "tx_powermail_pi1[field][zdb_nummer]": "",  
+                "tx_powermail_pi1[field][verlag]": "",
+                "tx_powermail_pi1[field][ort]": "",
+                "tx_powermail_pi1[field][issn]": "",
+                "tx_powermail_pi1[field][bestand]": "",
+                "tx_powermail_pi1[field][laufend]": "",
+                "tx_powermail_pi1[field][luecken]": "",
+                "tx_powermail_pi1[field][bemerkung]": "",
+
+                # Titelanderung ist immer leer; wenn es eine Titeländerung gab,
+                # wird ein Subparameter gesetzt. Wir implementieren hier erst einmal
+                # keine Titeländerung, deshalb sind die Felder für die Titeländerung
+                # auskommentiert
+                "tx_powermail_pi1[field][titelaenderung]": "",
+                #"tx_powermail_pi1[field][titelaenderung][]": "Es gab eine Titeländerung.",  
+                #"tx_powermail_pi1[field][alter_titel_bis]": "",  
+                #"tx_powermail_pi1[field][neue_issn]": "",  
+                #"tx_powermail_pi1[field][neuer_titel]": "",  
+                #"tx_powermail_pi1[field][neuer_erscheinungsort]": "",  
+
+                # Das Feld gtk wird nur übermittelt, wenn tatsächlich ein Wert ausgewählt ist
+                #"tx_powermail_pi1[field][gtk]": self.gtk[0],
+                }

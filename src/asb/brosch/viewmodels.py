@@ -16,7 +16,8 @@ from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     ZeitschDirectoryChooserDialogWrapper, BroschSearchDialogWrapper,\
     GroupFilterDialogWrapper, ZeitschriftenSearchDialogWrapper,\
     GroupSearchDialogWrapper, ZDBSearchDialogWrapper, TextDisplayDialogWrapper,\
-    BroschListDialogWrapper, BroschListFileDialogWrapper
+    BroschListDialogWrapper, BroschListFileDialogWrapper,\
+    ZDBMeldungDialogWrapper
 from asb.brosch.guiconstants import EDIT_MODE, VIEW_MODE
 
 WIDTH_11 = 55
@@ -696,7 +697,8 @@ class ZeitschriftenPage(GenericPage):
                  directory_dialog: ZeitschDirectoryChooserDialogWrapper,
                  search_dialog: ZeitschriftenSearchDialogWrapper,
                  zdb_search_dialog: ZDBSearchDialogWrapper,
-                 text_display_dialog: TextDisplayDialogWrapper
+                 text_display_dialog: TextDisplayDialogWrapper,
+                 zdb_submit_dialog: ZDBMeldungDialogWrapper,
                 ):
 
         self.jahrgang_edit_dialog = jahrgang_edit_dialog
@@ -704,6 +706,7 @@ class ZeitschriftenPage(GenericPage):
         self.directory_dialog = directory_dialog
         self.zdb_search_dialog = zdb_search_dialog
         self.text_display_dialog = text_display_dialog
+        self.zdb_submit_dialog = zdb_submit_dialog
         
         super().__init__(presenter, confirmation_dialog, filter_dialog, search_dialog)
     
@@ -947,7 +950,7 @@ class ZeitschriftenPage(GenericPage):
         box2.pack_start(self.zdb_data_button, True, True, 0)
         
         self.zdb_data_button = Gtk.Button.new_with_label("ZDB-Übermittlung")
-        self.zdb_data_button.connect("clicked", lambda button: self.presenter.submit_zdb_data())
+        self.zdb_data_button.connect("clicked", lambda button: self.presenter.submit_zdb_bestand())
         box2.pack_start(self.zdb_data_button, True, True, 0)
 
     def _get_edited_jahrgang(self):
@@ -1011,6 +1014,10 @@ class ZeitschriftenPage(GenericPage):
             self._set_string_label("???", self.lastsubmit_label)
         else:
             self._set_string_label(lastsubmit.strftime("%d. %B %Y"), self.lastsubmit_label)
+            
+    def confirm_meldung(self, meldung):
+        
+        return self.zdb_submit_dialog.run(meldung)
             
 
     zdbid = property(lambda self: self._get_string_value(self.zdbid_entry),

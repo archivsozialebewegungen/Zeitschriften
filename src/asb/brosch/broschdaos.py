@@ -381,12 +381,15 @@ class SystematikFilterProperty:
     def _get_systematik_expressions(self, value):
         
         expressions = []
+        split_values = re.split('\\s*:\\s*',value)
         for column in self.columns:
-            expressions.append(
-                or_(
-                    column == value,
-                    column.ilike('%s.%%' % value))
-            )
+            for sub_value in split_values:
+                expressions.append(
+                    or_(
+                        column == sub_value,
+                        column.ilike('%s.%%' % sub_value)
+                    )
+                )
         return expressions
 
 class YearLessProperty:
@@ -774,6 +777,7 @@ class GenericDao:
             order_by(*page_object.filter.sort_order_asc).\
             offset(page_object.current_page * page_object.page_size).\
             limit(page_object.page_size)
+        print(stmt)
         result = self.connection.execute(stmt)
         objects = []
         for row in result.fetchall():

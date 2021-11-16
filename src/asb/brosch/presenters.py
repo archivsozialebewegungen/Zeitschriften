@@ -479,68 +479,6 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.viewmodel.lastcheck = date.today()
         self.save()
             
-    def submit_zdb_data(self):
-                
-        #<input type="hidden" name="tx_powermail_pi1[__referrer][@extension]" value="Powermail">
-        #<input type="hidden" name="tx_powermail_pi1[__referrer][@vendor]" value="In2code">
-        #<input type="hidden" name="tx_powermail_pi1[__referrer][@controller]" value="Form">
-        #<input type="hidden" name="tx_powermail_pi1[__referrer][@action]" value="form">
-        #<input type="hidden" name="tx_powermail_pi1[__referrer][arguments]" value="YTowOnt9e468550f7c0d94f360fbfc7a38a114799fe9762f">
-        #<input type="hidden" name="tx_powermail_pi1[__referrer][@request]" value="a:4:{s:10:&quot;@extension&quot;;s:9:&quot;Powermail&quot;;s:11:&quot;@controller&quot;;s:4:&quot;Form&quot;;s:7:&quot;@action&quot;;s:4:&quot;form&quot;;s:7:&quot;@vendor&quot;;s:7:&quot;In2code&quot;;}49304093f87aeb947a8dda3e27c04ce8b387b6c2">
-        #<input type="hidden" name="tx_powermail_pi1[__trustedProperties]" value="a:2:{s:5:&quot;field&quot;;a:35:{s:5:&quot;sigel&quot;;i:1;s:16:&quot;sachbearbeiterin&quot;;i:1;s:5:&quot;email&quot;;i:1;s:5:&quot;titel&quot;;i:1;s:10:&quot;zdb_nummer&quot;;i:1;s:6:&quot;verlag&quot;;i:1;s:3:&quot;ort&quot;;i:1;s:4:&quot;issn&quot;;i:1;s:7:&quot;bestand&quot;;i:1;s:7:&quot;laufend&quot;;i:1;s:3:&quot;gtk&quot;;i:1;s:7:&quot;luecken&quot;;i:1;s:14:&quot;abbestellungen&quot;;i:1;s:9:&quot;abschluss&quot;;i:1;s:22:&quot;erscheinen_eingestellt&quot;;i:1;s:14:&quot;titelaenderung&quot;;a:1:{i:0;i:1;}s:15:&quot;alter_titel_bis&quot;;i:1;s:14:&quot;neuer_titel_ab&quot;;i:1;s:11:&quot;neuer_titel&quot;;i:1;s:12:&quot;neuer_verlag&quot;;i:1;s:21:&quot;neuer_erscheinungsort&quot;;i:1;s:9:&quot;neue_issn&quot;;i:1;s:8:&quot;ejournal&quot;;a:1:{i:0;i:1;}s:22:&quot;kostenlose_testversion&quot;;a:1:{i:0;i:1;}s:13:&quot;nutzungsdauer&quot;;i:1;s:22:&quot;bonus_zur_druckausgabe&quot;;a:1:{i:0;i:1;}s:36:&quot;ersatz_fuer_abbestellte_druckausgabe&quot;;a:1:{i:0;i:1;}s:37:&quot;ersatz_fuer_eingestellte_druckausgabe&quot;;a:1:{i:0;i:1;}s:3:&quot;url&quot;;i:1;s:6:&quot;lizenz&quot;;i:1;s:23:&quot;erlaeuterung_zur_lizenz&quot;;i:1;s:16:&quot;zugangskontrolle&quot;;i:1;s:33:&quot;erlaeuterung_zur_zugangskontrolle&quot;;i:1;s:9:&quot;bemerkung&quot;;i:1;s:4:&quot;__hp&quot;;i:1;}s:4:&quot;mail&quot;;a:1:{s:4:&quot;form&quot;;i:1;}}b4d129ada203fc13e38c061c61e61445a3954ca5">
-        
-        #<input required="required" type="text" name="tx_powermail_pi1[field][sigel]" value="">
-        #<input required="required" name="tx_powermail_pi1[field][sachbearbeiterin]" value="">
-        #<input required="required" type="email" name="tx_powermail_pi1[field][email]" value="">
-        #<input required="required" type="text" name="tx_powermail_pi1[field][titel]" value="">
-        #<input name="tx_powermail_pi1[field][zdb_nummer]" value="">
-        #<input name="tx_powermail_pi1[field][verlag]" value="">
-        #<input name="tx_powermail_pi1[field][ort]" value="">
-        #<input name="tx_powermail_pi1[field][issn]" value="">
-        #<textarea required="required" name="tx_powermail_pi1[field][bestand]"></textarea>
-        #<input required="required" type="radio" name="tx_powermail_pi1[field][laufend]" value="Ja. Laufender Bezug.|Nein. Kein laufender Bezug.">
-        #<input type="radio" name="tx_powermail_pi1[field][gtk]" value="Geschenk|Tausch|Kauf">
-        #<textarea placeholder="Lückenhaft ist (Band und Jahrgang)" name="tx_powermail_pi1[field][luecken]"></textarea>
-        #<input placeholder="Abbestellung voraussichtlich mit Bd./Jg" type="text" name="tx_powermail_pi1[field][abbestellungen]" value="">
-        #<input placeholder="letzter vorhandener Band/Jahrgang" type="text" name="tx_powermail_pi1[field][abschluss]" value="">
-        #<input placeholder="Zeitschrift hat mit Band/Jahrgang ihr Erscheinen eingestellt." type="text" name="tx_powermail_pi1[field][abschluss]" value="">
-        
-        #<input type="hidden" name="tx_powermail_pi1[field][titelaenderung]" value="">
-        #<input type="checkbox" name="tx_powermail_pi1[field][titelaenderung][]" value="Es gab eine Titeländerung.">
-        #<input placeholder="Zeitschrift hat bis Band/Jahrgang o.g. Titel geführt" name="tx_powermail_pi1[field][alter_titel_bis]" value="" disabled="">
-        #<input placeholder="Zeitschrift hat ab Band/Jahrgang folgenden Titel geführt" type="text" name="tx_powermail_pi1[field][neuer_titel_ab]" value="" disabled="">
-        #<textarea name="tx_powermail_pi1[field][neuer_titel]" disabled=""></textarea>
-        #<input type="text" name="tx_powermail_pi1[field][neuer_verlag]" value="" disabled="">
-        #<input type="text" name="tx_powermail_pi1[field][neuer_erscheinungsort]" value="" disabled="">
-        #<input type="text" name="tx_powermail_pi1[field][neue_issn]" value="" disabled="">
-        
-        #<input type="hidden" name="tx_powermail_pi1[field][ejournal]" value="">
-        #<input type="checkbox" name="tx_powermail_pi1[field][ejournal][]" value="Es handelt sich um ein E-Journal.">
-        
-        #<input type="hidden" name="tx_powermail_pi1[field][kostenlose_testversion]" value="">
-        #<input type="checkbox" name="tx_powermail_pi1[field][kostenlose_testversion][]" value="Kostenlose Testversion" disabled="">
-        #<input placeholder="voraussichtlicher Zeitraum" type="text" name="tx_powermail_pi1[field][nutzungsdauer]" value="" disabled="">
-        
-        #<input type="hidden" name="tx_powermail_pi1[field][bonus_zur_druckausgabe]" value="">
-        #<input type="checkbox" name="tx_powermail_pi1[field][bonus_zur_druckausgabe][]" value="Bonus zur Druckausgabe" disabled="">
-        
-        #<input type="hidden" name="tx_powermail_pi1[field][ersatz_fuer_abbestellte_druckausgabe]" value="">
-        #<input type="checkbox" name="tx_powermail_pi1[field][ersatz_fuer_abbestellte_druckausgabe][]" value="Ersatz für abbestellte Druckausgabe" disabled="">
-        
-        #<input type="hidden" name="tx_powermail_pi1[field][ersatz_fuer_eingestellte_druckausgabe]" value="">
-        #<input type="checkbox" name="tx_powermail_pi1[field][ersatz_fuer_eingestellte_druckausgabe][]" value="Ersatz für eine Druckausgabe (die ihr Erscheinen eingestellt hat)" disabled="">
-        
-        #<input type="url" name="tx_powermail_pi1[field][url]" value="" disabled="">
-        #<input type="radio" name="tx_powermail_pi1[field][lizenz]" value="Auf eigene Bibliothek beschränkt|Campus-Lizenz: Uni-Netz|Campus-Lizenz: Kliniknetz (Freiburg)|Campus-Lizenz: sonstiges Netz (bitte aufführen)" disabled="">
-        #<input placeholder="zur Lizenzregelung" type="text" name="tx_powermail_pi1[field][erlaeuterung_zur_lizenz]" value="" disabled="">
-        #<input type="radio" name="tx_powermail_pi1[field][zugangskontrolle]" value="durch IP-Nummer(n) /Domain-Name|durch User-ID und Codewort|freier Zugriff" data-parsley-multiple="tx_powermail_pi1fieldzugangskontrolle" disabled="">
-        #<input placeholder="zur Zugangskontrolle" type="text" name="tx_powermail_pi1[field][erlaeuterung_zur_zugangskontrolle]" value="" disabled="">
-        
-        #<textarea name="tx_powermail_pi1[field][bemerkung]"></textarea>
-        #<input type="text" name="tx_powermail_pi1[field][__hp]" value="">
-
-        self.meldungs_service.submit_zeitschrift(self.viewmodel.id)
-                        
     def update_derived_fields(self):
 
         self.viewmodel.mode = VIEW_MODE
@@ -549,6 +487,14 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.viewmodel.gruppe = self._get_gruppenname()
         self.viewmodel.jahrgaenge = self._get_jahrgaenge()
         self.set_nummern()
+        
+    def submit_zdb_bestand(self):
+        
+        meldung = self.viewmodel.confirm_meldung(self.meldungs_service.init_zdbmeldung(self.viewmodel.id))
+        if meldung is not None:
+            self.meldungs_service.submit_meldung(meldung)
+            self.viewmodel.lastsubmit = date.today()
+            self.save()
         
     def set_nummern(self):
         
