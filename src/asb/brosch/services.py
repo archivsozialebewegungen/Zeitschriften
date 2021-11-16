@@ -326,7 +326,7 @@ class QueryResult:
 class MeldungsService:
     
     #url = "http://ub.uni-freiburg.de/nutzen-leihen/praesenzbestaende/zeitschriften/informationen-fuer-bibliothekspersonal/meldung-von-periodika/?tx_powermail_pi1%5Baction%5D=create&tx_powermail_pi1%5Bcontroller%5D=Form&cHash=e0bd57b847bea24cf5ab64b0ae43eeaf#c16814"
-    url = "http://mossmann2/cgi-bin/test.pl"
+    url = "http://localhost/cgi-bin/test.pl"
     
     laufend = ["Ja. Laufender Bezug.", 
                "Nein. Kein laufender Bezug."]

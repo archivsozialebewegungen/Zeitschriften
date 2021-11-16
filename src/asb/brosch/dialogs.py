@@ -14,6 +14,7 @@ from asb.brosch.presenters import GroupSelectionPresenter,\
 from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter,\
     ZeitschriftenFilter, GruppenFilter
 import os
+from asb.brosch.guiconstants import COMBINATION_OR, COMBINATION_AND
 
 class GroupSelectionDialog(Gtk.Dialog, ViewModelMixin):
     
@@ -269,7 +270,7 @@ class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
                     self.entries[label].set_active(False)
                 else:
                     self.entries[label].set_active(True)
-        if record_filter.combination == BroschFilter.COMBINATION_AND:
+        if record_filter.combination == COMBINATION_AND:
             self.and_checkbutton.set_active(True)
         else:
             self.or_checkbutton.set_active(True)
@@ -314,9 +315,9 @@ class GenericFilterDialog(Gtk.Dialog, ViewModelMixin):
     def _get_combination(self):
         
         if self.and_checkbutton.get_active():
-            return BroschFilter.COMBINATION_AND
+            return COMBINATION_AND
         else:
-            return BroschFilter.COMBINATION_OR
+            return COMBINATION_OR
         
     def update_record_filter(self, record_filter):
         
@@ -894,9 +895,9 @@ class GenericSearchDialog(Gtk.Dialog, ViewModelMixin):
         for label in self.filter_object.labels:
             self.filter_object.set_property_value(label, self._get_string_value(self.entries[label]))
             if self.and_checkbutton.get_active():
-                self.filter_object.combination = BroschFilter.COMBINATION_AND
+                self.filter_object.combination = COMBINATION_AND
             else:
-                self.filter_object.combination = BroschFilter.COMBINATION_OR
+                self.filter_object.combination = COMBINATION_OR
         return self.filter_object
     
     def _set_filter(self, filter_object):

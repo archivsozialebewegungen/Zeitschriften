@@ -17,6 +17,7 @@ from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     GroupFilterDialogWrapper, ZeitschriftenSearchDialogWrapper,\
     GroupSearchDialogWrapper, ZDBSearchDialogWrapper, TextDisplayDialogWrapper,\
     BroschListDialogWrapper, BroschListFileDialogWrapper
+from asb.brosch.guiconstants import EDIT_MODE, VIEW_MODE
 
 WIDTH_11 = 55
 WIDTH_5 = 20
@@ -51,7 +52,7 @@ class GenericPage(Gtk.Box, ViewModelMixin):
         self.add_additional_buttons()
         
         self.presenter.set_viewmodel(self)
-        self.mode = GenericPresenter.VIEW_MODE
+        self.mode = VIEW_MODE
         
     def set_invisible_properties(self):
         
@@ -124,7 +125,7 @@ class GenericPage(Gtk.Box, ViewModelMixin):
         
         self.errormessage = ''
         self._mode = mode
-        if mode == self.presenter.EDIT_MODE:         
+        if mode == EDIT_MODE:         
             self._set_edit_status(True)
             self.edit_button.set_label('Abbrechen')
             self.save_button.set_sensitive(True)
@@ -244,8 +245,8 @@ class BroschPage(GenericPage):
         self.grid.attach(self.untertitle_entry, 2, 1, 11, 1)
 
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Autor*in:'), 1, 2, 1, 1)
-        self.name_entry = Gtk.Entry(width_chars=WIDTH_5)
-        self.grid.attach(self.name_entry, 2, 2, 5, 1)
+        self.autor_name_entry = Gtk.Entry(width_chars=WIDTH_5)
+        self.grid.attach(self.autor_name_entry, 2, 2, 5, 1)
     
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Vorname:'), 7, 2, 1, 1)
         self.vorname_entry = Gtk.Entry(width_chars=WIDTH_5)
@@ -308,8 +309,8 @@ class BroschPage(GenericPage):
         self.grid.attach(self.signatur_label, 8, 8, 1, 1)
 
         # Row 9
-        self.doppel_checkbutton = Gtk.CheckButton(label="Doppel")
-        self.grid.attach(self.doppel_checkbutton, 2, 9, 2, 1)
+        self.doppel_checkbox = Gtk.CheckButton(label="Doppel")
+        self.grid.attach(self.doppel_checkbox, 2, 9, 2, 1)
 
         self.digitalisiert_checkbutton = Gtk.CheckButton(label="Digitalisiert")
         self.grid.attach(self.digitalisiert_checkbutton, 4, 9, 2, 1)
@@ -440,8 +441,8 @@ class BroschPage(GenericPage):
     vorname = property(lambda self: self._get_string_value(self.vorname_entry),
                       lambda self, v: self._set_string_value(v, self.vorname_entry))
     
-    name = property(lambda self: self._get_string_value(self.name_entry),
-                      lambda self, v: self._set_string_value(v, self.name_entry))
+    autor_name = property(lambda self: self._get_string_value(self.autor_name_entry),
+                      lambda self, v: self._set_string_value(v, self.autor_name_entry))
     
     untertitel = property(lambda self: self._get_string_value(self.untertitle_entry),
                       lambda self, v: self._set_string_value(v, self.untertitle_entry))
@@ -471,8 +472,8 @@ class BroschPage(GenericPage):
 
     format = property(_get_format, _set_format)
 
-    doppel = property(lambda self: self._get_bool_value(self.doppel_checkbutton),
-                      lambda self, v: self._set_bool_value(v, self.doppel_checkbutton))
+    doppel = property(lambda self: self._get_bool_value(self.doppel_checkbox),
+                      lambda self, v: self._set_bool_value(v, self.doppel_checkbox))
 
     digitalisiert = property(lambda self: self._get_bool_value(self.digitalisiert_checkbutton),
                       lambda self, v: self._set_bool_value(v, self.digitalisiert_checkbutton))
@@ -656,7 +657,7 @@ class GroupPage(GenericPage):
         
         return self.confirmation_dialog.run(text="Willst Du die Vorläufergruppe wirklich entfernen?")
 
-    name = property(lambda self: self._get_string_value(self.groupname_entry),
+    gruppen_name = property(lambda self: self._get_string_value(self.groupname_entry),
                     lambda self, v: self._set_string_value(v, self.groupname_entry))
     abkuerzung = property(lambda self: self._get_string_value(self.abkuerzung_entry),
                     lambda self, v: self._set_string_value(v, self.abkuerzung_entry))

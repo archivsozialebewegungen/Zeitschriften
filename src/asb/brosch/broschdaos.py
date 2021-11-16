@@ -16,6 +16,10 @@ from sqlalchemy.exc import IntegrityError
 import os
 import re
 from datetime import date
+from asb.brosch.guiconstants import FILTER_PROPERTY_SYSTEMATIK,\
+    FILTER_PROPERTY_JAHR_VOR, FILTER_PROPERTY_SIGNATUR, FILTER_PROPERTY_TITEL,\
+    FILTER_PROPERTY_ORT, FILTER_PROPERTY_NAME, COMBINATION_AND,\
+    FILTER_PROPERTY_ZDB_MELDUNG
 
 BROSCH_METADATA = MetaData()
 
@@ -167,7 +171,7 @@ class Group:
     
     def __init__(self):
         self.id = None
-        self.name = None
+        self.gruppen_name = None
         self.abkuerzung = None
         self.ort = None
         self.gruendung_tag = None
@@ -181,7 +185,7 @@ class Group:
             
     def __str__(self):
         
-        return self.name
+        return self.gruppen_name
 
     
 class Brosch:
@@ -196,7 +200,7 @@ class Brosch:
         self.jahr = None
         self.seitenzahl = None
         self.vorname = None
-        self.name = None
+        self.autor_name = None
         self.untertitel = None
         self.thema = None
         self.herausgeber = None
@@ -364,7 +368,7 @@ class SystematikFilterProperty:
 
     def __init__(self, columns):
         
-        self.label = "Systematik"
+        self.label = FILTER_PROPERTY_SYSTEMATIK
         self.columns = columns
     
     def build_subexpression(self, value):
@@ -389,7 +393,7 @@ class YearLessProperty:
     
     def __init__(self):
         
-        self.label = 'Jahr vor'
+        self.label = FILTER_PROPERTY_JAHR_VOR
         
     def build_subexpression(self, value):
         
@@ -408,7 +412,7 @@ class SignaturProperty:
     
     def __init__(self):
         
-        self.label = "Signatur"
+        self.label = FILTER_PROPERTY_SIGNATUR
         self.signature_re = re.compile("(BRO)?\s*(\d+)\s*\.\s*0\s*.\s*(\d)\s*.\s*(\d+)", re.IGNORECASE)
         
     def build_subexpression(self, value):
@@ -459,13 +463,11 @@ class ZeitschSystematikFilterProperty(SystematikFilterProperty):
 
 class GenericFilter:
 
-    COMBINATION_AND = 'and'
-    COMBINATION_OR = 'or'
 
     def __init__(self, properties):
         
         self._expression_cache = None
-        self._combination = GenericFilter.COMBINATION_AND
+        self._combination = COMBINATION_AND
         
         self.properties = properties
         self.property_values = {}
@@ -473,6 +475,13 @@ class GenericFilter:
             if filter_property.label in self.property_values:
                 raise Exception("Duplicate property label")
             self.property_values[filter_property.label] = None
+    
+    def is_off(self):
+        
+        for val in self.property_values:
+            if self.property_values[val] is not None:
+                return False
+        return True
 
     def get_property_value(self, property_label):
         
@@ -498,7 +507,7 @@ class GenericFilter:
         elif len(subexpressions) == 1:
             self._expression_cache = subexpressions[0]
         else:
-            if self.combination == self.COMBINATION_AND:
+            if self.combination == COMBINATION_AND:
                 self._expression_cache = and_(*subexpressions)
             else:
                 self._expression_cache = or_(*subexpressions)
@@ -541,17 +550,25 @@ class BroschFilter(GenericFilter):
     
     TITEL_ORDER = 'titel'
     SIGNATUR_ORDER = 'signatur'
-    SORT_ORDERS = {'titel': [BROSCH_TABLE.c.titel, BROSCH_TABLE.c.id],
-                   'signatur': [BROSCH_TABLE.c.hauptsystematik, BROSCH_TABLE.c.format, BROSCH_TABLE.c.nummer]}
-    
+    SORT_ORDERS = {TITEL_ORDER: [BROSCH_TABLE.c.titel, BROSCH_TABLE.c.id],
+                   SIGNATUR_ORDER: [BROSCH_TABLE.c.hauptsystematik, BROSCH_TABLE.c.format, BROSCH_TABLE.c.nummer]}
+
     def __init__(self):
 
-        super().__init__([TextFilterProperty([BROSCH_TABLE.c.titel, BROSCH_TABLE.c.untertitel], "Titel"),
-                          TextFilterProperty([BROSCH_TABLE.c.ort], "Ort"),
-                          TextFilterProperty([BROSCH_TABLE.c.name, BROSCH_TABLE.c.vorname, BROSCH_TABLE.c.visdp, BROSCH_TABLE.c.herausgeber], 'Name'),
+        super().__init__([TextFilterProperty([BROSCH_TABLE.c.titel, 
+                                              BROSCH_TABLE.c.untertitel],
+                                              FILTER_PROPERTY_TITEL),
+                          TextFilterProperty([BROSCH_TABLE.c.ort],
+                                            FILTER_PROPERTY_ORT),
+                          TextFilterProperty([BROSCH_TABLE.c.name,
+                                              BROSCH_TABLE.c.vorname,
+                                              BROSCH_TABLE.c.visdp,
+                                              BROSCH_TABLE.c.herausgeber], 
+                                              FILTER_PROPERTY_NAME),
                           BroschSystematikFilterProperty(),
                           SignaturProperty(),
-                          YearLessProperty()])        
+                          YearLessProperty()])
+        
         self._sort_order = self.TITEL_ORDER
     
     def _get_sort_order(self):
@@ -631,20 +648,20 @@ class GruppenFilter(GenericFilter):
     
     def __init__(self):
 
-        super().__init__([TextFilterProperty([GROUP_TABLE.c.name], "Name"),
-                          TextFilterProperty([GROUP_TABLE.c.ort], "Ort"),
-                          TextFilterProperty([GROUP_TABLE.c.abkuerzung], "Abkürzung"),
-                          SystematikFilterProperty([GROUP_TABLE.c.systematik1, GROUP_TABLE.c.systematik2])])        
+        super().__init__([TextFilterProperty([GROUP_TABLE.c.name, GROUP_TABLE.c.abkuerzung], FILTER_PROPERTY_NAME),
+                          TextFilterProperty([GROUP_TABLE.c.ort], FILTER_PROPERTY_ORT),
+                          SystematikFilterProperty([GROUP_TABLE.c.systematik1, GROUP_TABLE.c.systematik2])]
+                        )        
         self.sort_order_asc = [GROUP_TABLE.c.name.asc()]
         self.sort_order_desc = [GROUP_TABLE.c.name.desc()]
         
     def get_next_expression(self, gruppe):
         
-        return GROUP_TABLE.c.name > gruppe.name
+        return GROUP_TABLE.c.name > gruppe.gruppen_name
     
     def get_previous_expression(self, gruppe):
         
-        return GROUP_TABLE.c.name < gruppe.name
+        return GROUP_TABLE.c.name < gruppe.gruppen_name
 
 class JahrgaengeFilter(GenericFilter):
     
@@ -672,11 +689,11 @@ class ZeitschriftenFilter(GenericFilter):
     
     def __init__(self):
         
-        super().__init__([TextFilterProperty([ZEITSCH_TABLE.c.titel, ZEITSCH_TABLE.c.untertitel], "Titel"),
-                          TextFilterProperty([ZEITSCH_TABLE.c.ort], "Ort"),
-                          TextFilterProperty([ZEITSCH_TABLE.c.herausgeber, ZEITSCH_TABLE.c.spender], 'Name'),
+        super().__init__([TextFilterProperty([ZEITSCH_TABLE.c.titel, ZEITSCH_TABLE.c.untertitel], FILTER_PROPERTY_TITEL),
+                          TextFilterProperty([ZEITSCH_TABLE.c.ort], FILTER_PROPERTY_ORT),
+                          TextFilterProperty([ZEITSCH_TABLE.c.herausgeber, ZEITSCH_TABLE.c.spender], FILTER_PROPERTY_NAME),
                           ZeitschSystematikFilterProperty(),
-                          BooleanFilterProperty(ZEITSCH_TABLE.c.unimeldung, 'ZDB-Meldung')])        
+                          BooleanFilterProperty(ZEITSCH_TABLE.c.unimeldung, FILTER_PROPERTY_ZDB_MELDUNG)])        
         self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc(), ZEITSCH_TABLE.c.id.asc()]
         self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc(), ZEITSCH_TABLE.c.id.desc()]
         
@@ -916,7 +933,7 @@ class BroschDao(GenericDao):
             'jahr': brosch.jahr,
             'seitenzahl': brosch.seitenzahl,
             'vorname': brosch.vorname,
-            'name': brosch.name,
+            'name': brosch.autor_name,
             'untertitel': brosch.untertitel,
             'thema': brosch.thema,
             'herausgeber': brosch.herausgeber,
@@ -948,7 +965,7 @@ class BroschDao(GenericDao):
         brosch.jahr = row[BROSCH_TABLE.c.jahr]
         brosch.seitenzahl = row[BROSCH_TABLE.c.seitenzahl]
         brosch.vorname = row[BROSCH_TABLE.c.vorname]
-        brosch.name = row[BROSCH_TABLE.c.name]
+        brosch.autor_name = row[BROSCH_TABLE.c.name]
         brosch.untertitel = row[BROSCH_TABLE.c.untertitel]
         brosch.thema = row[BROSCH_TABLE.c.thema]
         brosch.herausgeber = row[BROSCH_TABLE.c.herausgeber]
@@ -1098,7 +1115,7 @@ class GroupDao(GenericDao):
     
     def _collect_values(self, group):
     
-        return {'name': group.name,
+        return {'name': group.gruppen_name,
             'abkuerzung': group.abkuerzung,
             'ort': group.ort,
             'gruendung_tag': group.gruendung_tag,
@@ -1113,7 +1130,7 @@ class GroupDao(GenericDao):
 
     def _map_row(self, row, group):
         group.id = row[GROUP_TABLE.c.id]
-        group.name = row[GROUP_TABLE.c.name]
+        group.gruppen_name = row[GROUP_TABLE.c.name]
         group.abkuerzung = row[GROUP_TABLE.c.abkuerzung]
         group.ort = row[GROUP_TABLE.c.ort]
         group.gruendung_tag = row[GROUP_TABLE.c.gruendung_tag]

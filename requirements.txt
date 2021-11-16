@@ -6,6 +6,7 @@ importlib-metadata==3.9.0
 injector==0.18.4
 pkg-resources==0.0.0
 psycopg2==2.9.1
+PyQt5==5.12.2
 #pycairo==1.20.0
 PyGObject==3.40.0
 requests==2.25.1

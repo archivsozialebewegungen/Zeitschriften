@@ -1,0 +1,7 @@
+Default:
+
+https://www.svgrepo.com/collection/ant-design-filled-icons/
+
+Exit:
+
+https://www.svgrepo.com/collection/pictograms-2/

@@ -1,0 +1,16 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file alias="left.svg">caret-left-svgrepo-com.svg</file>
+    <file alias="right.svg">caret-right-svgrepo-com.svg</file>
+    <file alias="delete.svg">delete-svgrepo-com.svg</file>
+    <file alias="edit.svg">edit-svgrepo-com.svg</file>
+    <file alias="save.svg">save-svgrepo-com.svg</file>
+    <file alias="cancel.svg">close-circle-svgrepo-com.svg</file>
+    <file alias="new.svg">plus-circle-svgrepo-com.svg</file>
+    <file alias="fileadd.svg">file-add-svgrepo-com.svg</file>
+    <file alias="search.svg">highlight-svgrepo-com.svg</file>
+    <file alias="filter.svg">filter-svgrepo-com.svg</file>
+    <file alias="filter-red.svg">filter-red-svgrepo-com.svg</file>
+    <file alias="quit.svg">exit-svgrepo-com.svg</file>
+</qresource>
+</RCC>

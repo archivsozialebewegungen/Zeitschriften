@@ -14,6 +14,7 @@ from asb.brosch.services import ZeitschriftenService, MissingJahrgang,\
     MissingNumber, ZDBService, ZDBCatalog, MeldungsService
 from datetime import date
 from asb.brosch.reporting import BroschReportGenerator
+from asb.brosch.guiconstants import VIEW_MODE, EDIT_MODE
     
 class GroupSelectionPresenter:
 
@@ -75,9 +76,6 @@ class GroupFilterDialogPresenter(GenericFilterDialogPresenter):
 
 class GenericPresenter():
 
-    VIEW_MODE = 0
-    EDIT_MODE = 1
-
     def set_viewmodel(self, viewmodel):
         
         self.viewmodel = viewmodel
@@ -95,9 +93,34 @@ class GenericPresenter():
         
         pass
     
+    def get_current_filter(self):
+        
+        return self.dao.filter
+        
+    def does_filter_return_results(self, object_filter):
+        
+        current_filter = self.dao.filter
+        self.dao.filter = object_filter
+        return_value = True
+        try:
+            self.dao.fetch_first(type('', (), {})()) # This is a substitute-all-object
+        except NoDataException:
+            return_value = False
+        self.dao.filter = current_filter
+        return return_value
+    
     def reset_filter(self):
         
         self.dao.reset_filter()
+
+    def re_fetch(self):
+        
+        if self.viewmodel.id is None:
+            self.reset()
+            return
+
+        self.viewmodel = self.dao.fetch_by_id(self.viewmodel.id)
+        self.update_derived_fields()
     
     def fetch_next(self):
         
@@ -126,23 +149,25 @@ class GenericPresenter():
 
     def toggle_editing(self):
         
-        if self.viewmodel.mode == self.EDIT_MODE:
+        if self.viewmodel.mode == EDIT_MODE:
             if self.viewmodel.id is None:
                 self.viewmodel = self.dao.fetch_first(self.viewmodel)
             else:
                 self.viewmodel = self.dao.fetch_by_id(self.viewmodel.id, self.viewmodel)
-            self.viewmodel.mode = self.VIEW_MODE
+            self.viewmodel.mode = VIEW_MODE
         else:
-            self.viewmodel.mode = self.EDIT_MODE
+            self.viewmodel.mode = EDIT_MODE
             
     def filter_data(self):
         
         new_filter = self.viewmodel.new_filter
         if new_filter is None:
-            return
+            return not self.dao.filter.is_off()
         
         self.dao.filter = new_filter
         self.fetch_first()
+        
+        return not self.dao.filter.is_off()
              
     def change_group(self):
         
@@ -159,7 +184,7 @@ class GenericPresenter():
         except DataError as e:
             self.viewmodel.errormessage = e.message
             return
-        if self.viewmodel.mode == self.EDIT_MODE:
+        if self.viewmodel.mode == EDIT_MODE:
             self.toggle_editing()
         self.update_derived_fields()
 
@@ -201,7 +226,7 @@ class BroschPresenter(GenericPresenter):
         self.viewmodel.jahr = None
         self.viewmodel.seitenzahl = None
         self.viewmodel.vorname = None
-        self.viewmodel.name = None
+        self.viewmodel.autor_name = None
         self.viewmodel.untertitel = None
         self.viewmodel.thema = None
         self.viewmodel.herausgeber = None
@@ -226,7 +251,7 @@ class BroschPresenter(GenericPresenter):
 
     def update_derived_fields(self):
         
-        self.viewmodel.mode = self.VIEW_MODE
+        self.viewmodel.mode = VIEW_MODE
         self.viewmodel.errormessage = ''
         
         if self.viewmodel.hauptsystematik is None or self.viewmodel.nummer is None:
@@ -242,7 +267,7 @@ class BroschPresenter(GenericPresenter):
             self.viewmodel.gruppe = "%s" % gruppe
         else:
             self.viewmodel.gruppe = ''
-        
+    
     def edit_new(self):
         
         init_values = self.viewmodel.init_values
@@ -312,7 +337,7 @@ class GroupPresenter(GenericPresenter):
     def reset(self):
         
         self.viewmodel.id = None
-        self.viewmodel.name = None
+        self.viewmodel.gruppen_name = None
         self.viewmodel.abkuerzung = None
         self.viewmodel.ort = None
         self.viewmodel.gruendung_tag = None
@@ -518,7 +543,7 @@ class ZeitschriftenPresenter(GenericPresenter):
                         
     def update_derived_fields(self):
 
-        self.viewmodel.mode = self.VIEW_MODE
+        self.viewmodel.mode = VIEW_MODE
         self.viewmodel.vorlaeufertitel = self._get_vorlaeufertitel()
         self.viewmodel.nachfolgertitel = self._get_nachfolgertitel()
         self.viewmodel.gruppe = self._get_gruppenname()
@@ -611,10 +636,11 @@ class ZeitschriftenPresenter(GenericPresenter):
         
     def _get_gruppenname(self):
         
+        print(self.viewmodel.titel)
         if self.viewmodel.gruppen_id is None:
             return None
         gruppe = self.gruppen_dao.fetch_by_id(self.viewmodel.gruppen_id, Group())
-        return gruppe.name
+        return gruppe.gruppen_name
     
     def _get_jahrgaenge(self):
         
