@@ -7,14 +7,14 @@ from injector import Injector, singleton, inject, Module, provider
 import sys
 import resources
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QTabWidget,\
-    QGridLayout, QLineEdit, QLabel, QAction, QMenu, QCheckBox
+    QGridLayout, QLineEdit, QLabel, QAction, QMenu, QCheckBox, QFileDialog
 from asb.brosch.broschdaos import BroschDbModule, DataError
 from asb.brosch.presenters import BroschPresenter, ZeitschriftenPresenter,\
     GroupPresenter, GenericPresenter
 from PyQt5.QtGui import QIcon
 from asb.brosch.qtdialogs import BroschSignatureDialog, BroschFilterDialog,\
     GenericFilterDialog, GruppenFilterDialog, ZeitschFilterDialog,\
-    GenericSearchDialog, BroschSearchDialog
+    GenericSearchDialog, BroschSearchDialog, QuestionDialog
 from asb.brosch.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
 
 class ViewmodelMixin():
@@ -169,8 +169,11 @@ class GenericTab(QWidget, ViewmodelMixin):
     
     def search(self):
         
-        if self.search_dialog.exec(self.presenter.get_current_filter()):
-            pass
+        result = self.search_dialog.exec(self.presenter.get_current_filter())
+        if result:
+            record = self.search_dialog.selected_record
+            if record is not None:
+                self.presenter.fetch_by_id(record.id)
         
     mode = property(_get_mode, _set_mode)
     errormessage = property(None, _set_message)
@@ -349,6 +352,25 @@ class BroschTab(GenericTab):
         else:
             self.format_label.setText('A5')
             
+    def _get_new_file(self):
+        
+        dialog = QFileDialog()
+        dialog.setFileMode(QFileDialog.ExistingFiles)
+        dialog.setNameFilter("Pdf-Dateien (*.pdf)")
+        
+        if dialog.exec_():
+            filenames = dialog.selectedFiles()
+            for filename in filenames:
+                return filename
+        
+        return None
+    
+    def _confirm_remove_file(self):
+        
+        if QuestionDialog("Willst Du die Verknüpfung\nzum Digitalisat wirklich\nlöschen?").exec():
+            return True
+        else:
+            return False
         
     titel = property(lambda self: self._get_string_value(self.titel_entry),
                      lambda self, v: self._set_string_value(self.titel_entry, v))
@@ -434,12 +456,13 @@ class BroschTab(GenericTab):
 
     # Dialog properties
     init_values = property(lambda self: self._get_init_values())
-    
+    new_file = property(_get_new_file)
+    confirm_remove_file = property(_confirm_remove_file)
+
+    # Not yet implemented    
     new_group = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    new_file = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     list_file = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     list_parameters = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    confirm_remove_file = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     confirm_switch_format = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
 
 @singleton
@@ -590,6 +613,8 @@ class Window(QMainWindow):
         record_menu.addAction(self.delete_action)
         record_menu.addAction(self.search_action)
         record_menu.addAction(self.filter_action)
+        record_menu.addAction(self.addfile_action)
+        record_menu.addAction(self.removefile_action)
         record_menu.addAction(self.quit_action)
         
         self.zdb_menu = QMenu("&ZDB")
@@ -606,6 +631,7 @@ class Window(QMainWindow):
         edit_toolbar.addAction(self.delete_action)
         edit_toolbar.addAction(self.search_action)
         edit_toolbar.addAction(self.filter_action)
+        edit_toolbar.addAction(self.addfile_action)
         edit_toolbar.addAction(self.quit_action)
 
     def change_mode(self, mode: int):
@@ -625,6 +651,7 @@ class Window(QMainWindow):
         self.save_action.setEnabled(mode == EDIT_MODE)    
         self.cancel_action.setEnabled(mode == EDIT_MODE)    
         self.delete_action.setEnabled(mode == VIEW_MODE)
+        self.addfile_action.setEnabled(mode == VIEW_MODE)
         self.quit_action.setEnabled(mode == VIEW_MODE)
     
     def tab_changed(self, index):
@@ -640,14 +667,17 @@ class Window(QMainWindow):
     def display_brosch_actions(self):
         
         self.zdb_menu.setEnabled(False)
+        self.addfile_action.setEnabled(True)
     
     def display_gruppen_actions(self):
         
         self.zdb_menu.setEnabled(False)
+        self.addfile_action.setEnabled(False)
     
     def display_zeitsch_actions(self):
         
         self.zdb_menu.setEnabled(True)
+        self.addfile_action.setEnabled(True)
         
     def create_actions(self):
         
@@ -669,9 +699,21 @@ class Window(QMainWindow):
         self.search_action.triggered.connect(self.search)
         self.filter_action = QAction(QIcon(":filter.svg"), "&Filtern", self)
         self.filter_action.triggered.connect(self.filter)
+        self.addfile_action = QAction(QIcon(":fileadd.svg"), "Digitalisat &hinzufügen", self)
+        self.addfile_action.triggered.connect(self.add_file)
+        self.removefile_action = QAction("Digitalisat &abkoppeln", self)
+        self.removefile_action.triggered.connect(self.remove_file)
         self.quit_action = QAction(QIcon(":quit.svg"), "&Beenden", self)
         self.quit_action.triggered.connect(lambda value: QApplication.quit())
         
+    def add_file(self):
+        
+        self.current_tab.presenter.change_file()
+        
+    def remove_file(self):
+        
+        self.current_tab.presenter.remove_file()
+    
     def search(self):
         
         self.current_tab.search()

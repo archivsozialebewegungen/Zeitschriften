@@ -5,14 +5,34 @@ Created on 11.11.2021
 '''
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QGridLayout, QLabel,\
     QRadioButton, QLineEdit, QVBoxLayout, QPushButton, QStatusBar, QCheckBox,\
-    QTableWidget
+    QTableWidget, QTableWidgetItem, QAbstractItemView
 from PyQt5.QtCore import QSize, Qt
-from asb.brosch.broschdaos import BroschDao, BroschFilter, BooleanFilterProperty
+from asb.brosch.broschdaos import BroschDao, BroschFilter, BooleanFilterProperty,\
+    PageObject, Brosch
 from injector import singleton, inject
 from asb.brosch.guiconstants import FILTER_PROPERTY_TITEL, FILTER_PROPERTY_ORT,\
     FILTER_PROPERTY_NAME, FILTER_PROPERTY_SIGNATUR, FILTER_PROPERTY_SYSTEMATIK
 from asb.brosch.presenters import BroschSearchDialogPresenter
 
+class QuestionDialog(QDialog):
+    
+    def __init__(self, question):
+
+        super().__init__()
+
+        self.setWindowTitle("Frage")
+
+        QBtn = QDialogButtonBox.Yes | QDialogButtonBox.No
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        message = QLabel(question)
+        self.layout.addWidget(message)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
 
 class BroschSignatureDialog(QDialog):
     
@@ -87,6 +107,7 @@ class GenericFilterDialog(QDialog):
         self.resize(QSize(150, 100))
         self._filter = None
         self.entries = None
+        self.current_row = 0
         
         main_layout = QVBoxLayout(self)
         main_layout.addLayout(self.get_content_layout())
@@ -97,7 +118,8 @@ class GenericFilterDialog(QDialog):
         
     def exec(self, current_filter, *args, **kwargs):
 
-        self.add_widgets(current_filter.properties)
+        if self.entries is None:
+            self.add_widgets(current_filter.properties)
         
         self._filter = current_filter
         for filter_property in self._filter.properties:
@@ -114,26 +136,22 @@ class GenericFilterDialog(QDialog):
     
     def add_widgets(self, filter_properties):
         
-        if self.entries is not None:
-            # Already initialized
-            return
-        
-        col_counter = 0
         self.entries = {}
         for filter_property in filter_properties:
-            self.content_layout.addWidget(QLabel(filter_property.label), col_counter, 0, 1, 1)
+            self.content_layout.addWidget(QLabel(filter_property.label), self.current_row, 0, 1, 1)
             if type(filter_property) == BooleanFilterProperty:
                 self.entries[filter_property.label] = QCheckBox(filter_property.label)
             else: 
                 self.entries[filter_property.label] = QLineEdit()
-            self.content_layout.addWidget(self.entries[filter_property.label], col_counter, 1, 1, 3)
-            col_counter += 1
+            self.content_layout.addWidget(self.entries[filter_property.label], self.current_row, 1, 1, 3)
+            self.current_row += 1
 
         self.and_radiobutton = QRadioButton("alle Bedingungen")
         self.and_radiobutton.setChecked(True)
-        self.content_layout.addWidget(self.and_radiobutton, col_counter, 0, 1, 2)
+        self.content_layout.addWidget(self.and_radiobutton, self.current_row, 0, 1, 2)
         self.or_radiobutton = QRadioButton("irgendeine Bedingung")
-        self.content_layout.addWidget(self.or_radiobutton, col_counter, 2, 1, 2)
+        self.content_layout.addWidget(self.or_radiobutton, self.current_row, 2, 1, 2)
+        self.current_row += 1
 
     def get_button_box(self):
         
@@ -221,6 +239,7 @@ class GenericSearchDialog(GenericFilterDialog):
     def __init__(self, title, presenter):
         
         GenericFilterDialog.__init__(self, title)
+        self.resize(QSize(250, 666))
         self.presenter = presenter
         self.presenter.viewmodel = self
 
@@ -228,12 +247,19 @@ class GenericSearchDialog(GenericFilterDialog):
         
         GenericFilterDialog.add_widgets(self, search_properties)
         
-        self.result_stats_label = QLabel("Noch keine Suche durchgeführt")
-        self.content_layout.addWidget(self.result_stats_label)
+        self.result_stat_label = QLabel("Noch keine Suche durchgeführt")
+        self.content_layout.addWidget(self.result_stat_label, self.current_row, 0, 1, 4)
+        self.current_row += 1
         
-        self.result_table = QTableWidget(10, 2)
-        self.content_layout.addWidget(self.result_table)    
-    
+        self.result_table = QTableWidget(0, 2)
+        self.content_layout.addWidget(self.result_table, self.current_row, 0, 1, 4)
+        self.result_table.setHorizontalHeaderLabels(["Signatur", "Titel"])
+        self.result_table.setColumnWidth(0,120)
+        self.result_table.horizontalHeader().setStretchLastSection(True);
+        self.result_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.result_table.itemDoubleClicked.connect(self._record_selected)
+
+        self.current_row += 1    
     
     def get_button_box(self):
         
@@ -243,34 +269,72 @@ class GenericSearchDialog(GenericFilterDialog):
         button_box.addButton(search_button, QDialogButtonBox.ActionRole)
         search_button.clicked.connect(self._search)
 
+        next_button = QPushButton("&Weiter")
+        button_box.addButton(next_button, QDialogButtonBox.ActionRole)
+        next_button.clicked.connect(self._next)
+
+        previous_button = QPushButton("&Zurück")
+        button_box.addButton(previous_button, QDialogButtonBox.ActionRole)
+        previous_button.clicked.connect(self._previous)
+
         reset_button = QPushButton("&Zurücksetzen")
         button_box.addButton(reset_button, QDialogButtonBox.ResetRole)
         reset_button.clicked.connect(self._reset)
 
         select_button = QPushButton("&Auswählen")
         button_box.addButton(select_button, QDialogButtonBox.AcceptRole)
+        select_button.clicked.connect(self._record_selected)
 
         cancel_button = QPushButton("A&bbrechen")
         button_box.addButton(cancel_button, QDialogButtonBox.RejectRole)
+
+        search_button.setDefault(True)
 
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         
         return button_box
 
+    def _record_selected(self):
+
+        self.selected_record = None
+        
+        for row_no in range(0, self.result_table.rowCount()):
+            if self.result_table.item(row_no, 0).isSelected():
+                self.selected_record = self._records[row_no]
+                break
+
+        if self.selected_record is None:
+            self.reject()
+        
+        self.accept()
+        
     def _search(self):
         
         self.presenter.find_records()
+        
+    def _next(self):
+        
+        self.presenter.next_page()
+        
+    def _previous(self):
+        
+        self.presenter.prev_page()
 
-    def _set_result_stats(self, stats: str):
+    def _set_result_stat(self, stat: str):
         
-        self.result_stats_label.setText(stats)
+        self.result_stat_label.setText(stat)
     
-    def _set_records(self, records):
+    def _set_records(self, records: [Brosch]):
+
+        self._records = records
+        self.result_table.setRowCount(len(records))
         
-        pass
+        for index in range(0, len(records)):
+            self.result_table.setItem(index, 0, QTableWidgetItem(records[index].signatur))
+            self.result_table.setItem(index, 1, QTableWidgetItem(records[index].titel))
     
-    result_stats = property(None, _set_result_stats)
+    result_stat = property(None, _set_result_stat)
     records = property(None, _set_records)
     
 @singleton
