@@ -16,16 +16,16 @@ from sqlalchemy.exc import IntegrityError
 import os
 import re
 from datetime import date
-from asb.brosch.guiconstants import FILTER_PROPERTY_SYSTEMATIK,\
+from asb_zeitschriften.guiconstants import FILTER_PROPERTY_SYSTEMATIK,\
     FILTER_PROPERTY_JAHR_VOR, FILTER_PROPERTY_SIGNATUR, FILTER_PROPERTY_TITEL,\
     FILTER_PROPERTY_ORT, FILTER_PROPERTY_NAME, COMBINATION_AND,\
     FILTER_PROPERTY_ZDB_MELDUNG
-
-BROSCH_METADATA = MetaData()
+from asb_systematik.SystematikDao import ALEXANDRIA_METADATA, DataError,\
+    NoDataException, SystematikNode
 
 GROUP_TABLE = Table(
     'gruppen',
-    BROSCH_METADATA,
+    ALEXANDRIA_METADATA,
     Column('id', Integer, primary_key=True, nullable=False),
     Column('name', String, nullable=False, index=True),
     Column('abkuerzung', String, index=True),
@@ -42,21 +42,21 @@ GROUP_TABLE = Table(
 
 VORLAEUFER_TABLE = Table(
     'vorlaeufer',
-    BROSCH_METADATA,
+    ALEXANDRIA_METADATA,
     Column('gruppenid', Integer, ForeignKey('gruppen.id')),
     Column('vorlaeuferid', Integer, ForeignKey('gruppen.id'))
 )
 
 UNTERGRUPPEN_TABLE = Table(
     'untergruppen',
-    BROSCH_METADATA,
+    ALEXANDRIA_METADATA,
     Column('gruppenid', Integer, ForeignKey('gruppen.id')),
     Column('untergruppenid', Integer, ForeignKey('gruppen.id'))
 )
 
 BROSCH_TABLE = Table(
     'broschueren',
-    BROSCH_METADATA,
+    ALEXANDRIA_METADATA,
     Column('id', Integer, primary_key=True, nullable=False),
     Column('exemplare', Integer),
     Column('verlag', String),
@@ -90,7 +90,7 @@ BROSCH_TABLE = Table(
 
 ZEITSCH_TABLE = Table(
     'zeitschriften',
-    BROSCH_METADATA,
+    ALEXANDRIA_METADATA,
     Column('id', Integer, primary_key=True, nullable=False),
     Column('plzalt', Integer),
     Column('unimeldung', Boolean),
@@ -131,7 +131,7 @@ ZEITSCH_TABLE = Table(
 
 ZVORLAEUFER_TABLE = Table (
     'zvorlaeufer',
-    BROSCH_METADATA,
+    ALEXANDRIA_METADATA,
     Column('vid', Integer, ForeignKey('zeitschriften.id'), nullable=False),
     Column('zid', Integer, ForeignKey('zeitschriften.id'), nullable=False),
     UniqueConstraint('vid', 'zid')
@@ -139,7 +139,7 @@ ZVORLAEUFER_TABLE = Table (
 
 JAHRGANG_TABLE = Table(
     'jahrgaenge',
-    BROSCH_METADATA,
+    ALEXANDRIA_METADATA,
     Column('id', Integer, primary_key=True, nullable=False),
     Column('nummern', String),
     Column('beschaedigt', String),
@@ -156,17 +156,14 @@ JAHRGANG_TABLE = Table(
     UniqueConstraint('jahr', 'zid')
 )
 
+BROSCH2SYST_TABLE = Table(
+    'broschtosyst',
+    ALEXANDRIA_METADATA,
+    Column('syst_id', Integer, ForeignKey("systematik.id")),
+    Column('brosch_id', Integer, ForeignKey("broschueren.id")),
+    UniqueConstraint('syst_id', 'brosch_id')
+)
 
-class NoDataException(Exception):
-    pass
-
-
-class DataError(Exception):
-    
-    def __init__(self, message):
-        self.message = message
-
-        
 class Group:
     
     def __init__(self):
@@ -777,7 +774,6 @@ class GenericDao:
             order_by(*page_object.filter.sort_order_asc).\
             offset(page_object.current_page * page_object.page_size).\
             limit(page_object.page_size)
-        print(stmt)
         result = self.connection.execute(stmt)
         objects = []
         for row in result.fetchall():
@@ -881,6 +877,15 @@ class BroschDao(GenericDao):
         self.filter = BroschFilter()
         self.table = BROSCH_TABLE
         self.join = BROSCH_TABLE
+
+    def add_syst_join(self, brosch: Brosch, systematik_node: SystematikNode):
+        
+        stmt = insert(BROSCH2SYST_TABLE).values(syst_id=systematik_node.id, brosch_id=brosch.id)
+        try:
+            self.connection.execute(stmt)
+        except IntegrityError:
+            # Already inserted
+            pass
 
     def fetch_next_number_old(self, hauptsystematik: int, format: int):
         
@@ -1373,12 +1378,4 @@ class JahrgaengeDao(GenericDao):
             'komplett': jahrgang.komplett,
             'register': jahrgang.register
         }
-
-class BroschDbModule(Module):
-
-    @singleton
-    @provider
-    def provide_connection(self) -> Connection:
-        engine = create_engine(os.environ['BROSCH_DB_URL'])
-        return engine.connect()
 

@@ -3,7 +3,7 @@ Created on 28.09.2020
 
 @author: michael
 '''
-from asb.brosch.broschdaos import NoDataException, Jahrgang,\
+from asb_zeitschriften.broschdaos import NoDataException, Jahrgang,\
     JahrgaengeDao, ZeitschriftenDao, Zeitschrift
 from datetime import date
 import re

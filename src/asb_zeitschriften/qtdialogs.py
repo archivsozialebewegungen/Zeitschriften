@@ -7,12 +7,9 @@ from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QGridLayout, QLabel,\
     QRadioButton, QLineEdit, QVBoxLayout, QPushButton, QStatusBar, QCheckBox,\
     QTableWidget, QTableWidgetItem, QAbstractItemView
 from PyQt5.QtCore import QSize, Qt
-from asb.brosch.broschdaos import BroschDao, BroschFilter, BooleanFilterProperty,\
-    PageObject, Brosch
+from asb_zeitschriften.broschdaos import BooleanFilterProperty, Brosch
 from injector import singleton, inject
-from asb.brosch.guiconstants import FILTER_PROPERTY_TITEL, FILTER_PROPERTY_ORT,\
-    FILTER_PROPERTY_NAME, FILTER_PROPERTY_SIGNATUR, FILTER_PROPERTY_SYSTEMATIK
-from asb.brosch.presenters import BroschSearchDialogPresenter
+from asb_zeitschriften.presenters import BroschSearchDialogPresenter
 
 class QuestionDialog(QDialog):
     

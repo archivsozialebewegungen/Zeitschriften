@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source ./env
-
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
@@ -10,6 +8,8 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 
+source $DIR/env
+
 source $DIR/../venv/bin/activate
-export PYTHONPATH=$DIR/../src:$PYTHONPATH
-python3 $DIR/../src/asb/brosch/broschgtkgui.py
+export PYTHONPATH=$DIR/../src:$DIR/../Systematik/src:$PYTHONPATH
+python3 $DIR/../src/asb_zeitschriften/broschgtkgui.py

@@ -3,7 +3,7 @@ Created on 27.04.2021
 
 @author: michael
 '''
-from asb.brosch.broschdaos import BroschFilter, BroschDao, PageObject, Brosch,\
+from asb_zeitschriften.broschdaos import BroschFilter, BroschDao, PageObject, Brosch,\
     DataError, ZeitschriftenDao, Zeitschrift, ZeitschriftenFilter
 from injector import singleton, inject
 from datetime import date

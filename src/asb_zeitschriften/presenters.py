@@ -4,17 +4,17 @@ Created on 24.08.2020
 @author: michael
 '''
 from injector import inject, singleton
-from asb.brosch.broschdaos import NoDataException, DataError,\
+from asb_zeitschriften.broschdaos import NoDataException, DataError,\
     Group, GroupDao, Brosch, BroschDao,\
     PageObject, Jahrgang, JahrgaengeDao,\
     Zeitschrift, ZeitschriftenDao
 import os
 from sqlalchemy.exc import IntegrityError
-from asb.brosch.services import ZeitschriftenService, MissingJahrgang,\
+from asb_zeitschriften.services import ZeitschriftenService, MissingJahrgang,\
     MissingNumber, ZDBService, ZDBCatalog, MeldungsService
 from datetime import date
-from asb.brosch.reporting import BroschReportGenerator
-from asb.brosch.guiconstants import VIEW_MODE, EDIT_MODE
+from asb_zeitschriften.reporting import BroschReportGenerator
+from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE
     
 class GroupSelectionPresenter:
 

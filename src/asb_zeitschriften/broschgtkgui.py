@@ -6,15 +6,15 @@ Created on 13.08.2020
 import gi
 import os
 import sys
+from asb_systematik.SystematikDao import AlexandriaDbModule
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 from injector import Injector, inject
-from asb.brosch.viewmodels import BroschPage, GroupPage, ZeitschriftenPage
-from asb.brosch.broschdaos import BroschDbModule
+from asb_zeitschriften.viewmodels import BroschPage, GroupPage, ZeitschriftenPage
 
 def check_environment():
     
-    variables = ('BROSCH_DB_URL', 'BROSCH_DIR', 'ZEITSCH_DIR')
+    variables = ('DB_URL', 'BROSCH_DIR', 'ZEITSCH_DIR')
     for variable in variables:
         if not variable in os.environ:
             print("Die Umgebungsvariable '%s' muss gesetzt sein! Abbruch." % variable)
@@ -86,7 +86,7 @@ class BroschWindow(Gtk.Window):
 if __name__ == '__main__':
 
     check_environment()
-    injector = Injector([BroschDbModule()])
+    injector = Injector([AlexandriaDbModule])
     win = injector.get(BroschWindow)
     win.show_all()
     Gtk.main()

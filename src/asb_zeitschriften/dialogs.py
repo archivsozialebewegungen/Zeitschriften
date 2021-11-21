@@ -4,18 +4,18 @@ Created on 27.08.2020
 @author: michael
 '''
 from gi.repository import Gtk
-from asb.brosch.mixins import ViewModelMixin
+from asb_zeitschriften.mixins import ViewModelMixin
 from injector import inject, singleton
-from asb.brosch.presenters import GroupSelectionPresenter,\
+from asb_zeitschriften.presenters import GroupSelectionPresenter,\
     BroschFilterDialogPresenter, JahrgangEditDialogPresenter,\
     ZeitschriftenFilterDialogPresenter, BroschSearchDialogPresenter,\
     GroupFilterDialogPresenter, GroupSearchDialogPresenter,\
     ZeitschriftenSearchDialogPresenter, ZDBSearchDialogPresenter
-from asb.brosch.broschdaos import BroschDao, DataError, BroschFilter,\
+from asb_zeitschriften.broschdaos import BroschDao, DataError, BroschFilter,\
     ZeitschriftenFilter, GruppenFilter
 import os
-from asb.brosch.guiconstants import COMBINATION_OR, COMBINATION_AND
-from asb.brosch.services import MeldungsService
+from asb_zeitschriften.guiconstants import COMBINATION_OR, COMBINATION_AND
+from asb_zeitschriften.services import MeldungsService
 
 class GroupSelectionDialog(Gtk.Dialog, ViewModelMixin):
     

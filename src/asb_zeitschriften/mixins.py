@@ -4,7 +4,7 @@ Created on 27.08.2020
 @author: michael
 '''
 from gi.repository import Gtk
-from asb.brosch.broschdaos import DataError
+from asb_systematik.SystematikDao import DataError
 
 class ViewModelMixin():
     

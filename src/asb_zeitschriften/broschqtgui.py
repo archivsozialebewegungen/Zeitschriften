@@ -8,14 +8,15 @@ import sys
 import resources
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QTabWidget,\
     QGridLayout, QLineEdit, QLabel, QAction, QMenu, QCheckBox, QFileDialog
-from asb.brosch.broschdaos import BroschDbModule, DataError
-from asb.brosch.presenters import BroschPresenter, ZeitschriftenPresenter,\
+from asb_zeitschriften.broschdaos import DataError
+from asb_zeitschriften.presenters import BroschPresenter, ZeitschriftenPresenter,\
     GroupPresenter, GenericPresenter
 from PyQt5.QtGui import QIcon
-from asb.brosch.qtdialogs import BroschSignatureDialog, BroschFilterDialog,\
+from asb_zeitschriften.qtdialogs import BroschSignatureDialog, BroschFilterDialog,\
     GenericFilterDialog, GruppenFilterDialog, ZeitschFilterDialog,\
     GenericSearchDialog, BroschSearchDialog, QuestionDialog
-from asb.brosch.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
+from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
+from asb_systematik.SystematikDao import AlexandriaDbModule
 
 class ViewmodelMixin():
 
@@ -746,7 +747,7 @@ class QtGuiModule(Module):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
-    injector = Injector([BroschDbModule(), QtGuiModule()])
+    injector = Injector([AlexandriaDbModule, QtGuiModule])
     win = injector.get(Window)
     win.show()
     sys.exit(app.exec_())

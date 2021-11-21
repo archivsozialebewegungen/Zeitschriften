@@ -4,12 +4,12 @@ Created on 24.08.2020
 @author: michael
 '''
 from gi.repository import Gtk
-from asb.brosch.presenters import BroschPresenter, GroupPresenter,\
+from asb_zeitschriften.presenters import BroschPresenter, GroupPresenter,\
     ZeitschriftenPresenter, GenericPresenter
-from asb.brosch.broschdaos import BroschDao
+from asb_zeitschriften.broschdaos import BroschDao
 from injector import inject
-from asb.brosch.mixins import ViewModelMixin
-from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
+from asb_zeitschriften.mixins import ViewModelMixin
+from asb_zeitschriften.dialogs import GroupSelectionDialogWrapper,\
     BroschInitDialogWrapper, BroschFilterDialogWrapper,\
     ConfirmationDialogWrapper, BroschFileChooserDialogWrapper,\
     JahrgangEditDialogWrapper, ZeitschriftenFilterDialogWrapper,\
@@ -18,7 +18,7 @@ from asb.brosch.dialogs import GroupSelectionDialogWrapper,\
     GroupSearchDialogWrapper, ZDBSearchDialogWrapper, TextDisplayDialogWrapper,\
     BroschListDialogWrapper, BroschListFileDialogWrapper,\
     ZDBMeldungDialogWrapper
-from asb.brosch.guiconstants import EDIT_MODE, VIEW_MODE
+from asb_zeitschriften.guiconstants import EDIT_MODE, VIEW_MODE
 
 WIDTH_11 = 55
 WIDTH_5 = 20
