@@ -8,7 +8,8 @@ from injector import inject, singleton, provider, Module
 from sqlalchemy.sql.schema import Table, MetaData, Column, ForeignKey, \
     UniqueConstraint
 from sqlalchemy.sql.sqltypes import Integer, String, Boolean, Date
-from sqlalchemy.sql.expression import insert, select, update, and_, or_, text
+from sqlalchemy.sql.expression import insert, select, update, and_, or_, text,\
+    delete
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.sql.functions import count, func
 from sqlalchemy.engine import create_engine
@@ -887,6 +888,21 @@ class BroschDao(GenericDao):
             # Already inserted
             pass
 
+    def del_syst_join(self, brosch: Brosch, systematik_node: SystematikNode):
+        
+        stmt = delete(BROSCH2SYST_TABLE).where(and_(BROSCH2SYST_TABLE.c.syst_id == systematik_node.id, 
+                                                    BROSCH2SYST_TABLE.c.brosch_id == brosch.id))
+        self.connection.execute(stmt)
+
+    def fetch_systematik_ids(self, brosch: Brosch):
+        
+        stmt = select([BROSCH2SYST_TABLE]).where(BROSCH2SYST_TABLE.c.brosch_id == brosch.id)
+        result = self.connection.execute(stmt)
+        syst_ids = []
+        for record in result.fetchall():
+            syst_ids.append(record[BROSCH2SYST_TABLE.c.syst_id])
+        return syst_ids
+        
     def fetch_next_number_old(self, hauptsystematik: int, format: int):
         
         max = self.connection.execute(select([func.max(BROSCH_TABLE.c.nummer)]).where(

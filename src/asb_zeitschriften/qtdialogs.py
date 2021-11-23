@@ -10,10 +10,11 @@ from PyQt5.QtCore import QSize, Qt
 from asb_zeitschriften.broschdaos import BooleanFilterProperty, Brosch
 from injector import singleton, inject
 from asb_zeitschriften.presenters import BroschSearchDialogPresenter
+from asb_systematik.SystematikTreeWidgetService import SystematikTreeWidgetService
 
 class QuestionDialog(QDialog):
     
-    def __init__(self, question):
+    def __init__(self):
 
         super().__init__()
 
@@ -26,10 +27,15 @@ class QuestionDialog(QDialog):
         self.buttonBox.rejected.connect(self.reject)
 
         self.layout = QVBoxLayout()
-        message = QLabel(question)
-        self.layout.addWidget(message)
+        self.question_label = QLabel("Hier kommt die Frage rein")
+        self.layout.addWidget(self.question_label)
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
+        
+    def exec(self, question: str):
+        
+        self.question_label.setText(question)
+        return super().exec()
 
 class BroschSignatureDialog(QDialog):
     
@@ -341,3 +347,38 @@ class BroschSearchDialog(GenericSearchDialog):
     def __init__(self, presenter: BroschSearchDialogPresenter):
         
         super().__init__("Broschürensuche", presenter)
+
+@singleton        
+class SystematikSelectDialog(QDialog):
+    
+    @inject
+    def __init__(self, systematik_tree_widget_service: SystematikTreeWidgetService):
+        
+        self.widget_service = systematik_tree_widget_service
+        
+        super().__init__()
+                
+        self.setWindowTitle("Systematikpunkt auswählen")
+        self.resize(QSize(600, 400))
+
+        QBtn = QDialogButtonBox.Cancel | QDialogButtonBox.Ok
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        self.tree_widget = self.widget_service.create_tree_widget()
+        self.layout.addWidget(self.tree_widget)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+        
+    def _get_selected(self):
+        
+        item = self.tree_widget.currentItem()
+        if item is None:
+            return None
+        
+        return item.systematik_node
+
+    selected = property(_get_selected)

@@ -4,12 +4,13 @@ Created on 28.09.2020
 @author: michael
 '''
 from asb_zeitschriften.broschdaos import NoDataException, Jahrgang,\
-    JahrgaengeDao, ZeitschriftenDao, Zeitschrift
+    JahrgaengeDao, ZeitschriftenDao, Zeitschrift, BroschDao, Brosch
 from datetime import date
 import re
 import requests
 from injector import inject, singleton
 from html.parser import HTMLParser
+from asb_systematik.SystematikDao import SystematikDao, SystematikNode
 
 class MissingJahrgang(Exception):
     
@@ -330,6 +331,30 @@ class ZeitschriftenService:
         
         current_date = date.today()
         return current_date.year
+
+@singleton    
+class BroschuerenService:
+    
+    @inject
+    def __init__(self, brosch_dao: BroschDao, syst_dao: SystematikDao):
+        
+        self.brosch_dao = brosch_dao
+        self.syst_dao = syst_dao
+        
+    def fetch_systematik_nodes(self, brosch: Brosch):
+        
+        nodes = []
+        for syst_id in self.brosch_dao.fetch_systematik_ids(brosch):
+            nodes.append(self.syst_dao.fetch_by_id(syst_id))
+        return nodes
+    
+    def add_systematik_node(self, brosch: Brosch, systematik_node: SystematikNode):
+        
+        self.brosch_dao.add_syst_join(brosch, systematik_node)
+
+    def remove_systematik_node(self, brosch: Brosch, systematik_node: SystematikNode):
+        
+        self.brosch_dao.del_syst_join(brosch, systematik_node)
 
 class JsonRecord:
     

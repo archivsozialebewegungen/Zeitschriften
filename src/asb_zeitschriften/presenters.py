@@ -11,10 +11,11 @@ from asb_zeitschriften.broschdaos import NoDataException, DataError,\
 import os
 from sqlalchemy.exc import IntegrityError
 from asb_zeitschriften.services import ZeitschriftenService, MissingJahrgang,\
-    MissingNumber, ZDBService, ZDBCatalog, MeldungsService
+    MissingNumber, ZDBService, ZDBCatalog, MeldungsService, BroschuerenService
 from datetime import date
 from asb_zeitschriften.reporting import BroschReportGenerator
 from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE
+from asb_systematik.SystematikDao import SystematikNode
     
 class GroupSelectionPresenter:
 
@@ -210,9 +211,10 @@ class GenericPresenter():
 class BroschPresenter(GenericPresenter):
 
     @inject
-    def __init__(self, brosch_dao: BroschDao, group_dao: GroupDao, report_generator: BroschReportGenerator):
+    def __init__(self, brosch_dao: BroschDao, brosch_service: BroschuerenService, group_dao: GroupDao, report_generator: BroschReportGenerator):
         
         self.dao = brosch_dao
+        self.brosch_service = brosch_service
         self.group_dao = group_dao
         self.report_generator = report_generator
 
@@ -267,7 +269,26 @@ class BroschPresenter(GenericPresenter):
             self.viewmodel.gruppe = "%s" % gruppe
         else:
             self.viewmodel.gruppe = ''
-    
+            
+        self.viewmodel.systematikpunkte = self.brosch_service.fetch_systematik_nodes(self.viewmodel)
+
+    def add_systematik_node(self):
+        
+        node = self.viewmodel.new_systematik_node
+        if node is None:
+            return
+        self.brosch_service.add_systematik_node(self.viewmodel, node)
+        self.update_derived_fields()
+        
+    def remove_systematik_node(self):
+        
+        node = self.viewmodel.current_systematik_node
+        if node is None:
+            return
+        if self.viewmodel.systematik_node_removal_confirmation:
+            self.brosch_service.remove_systematik_node(self.viewmodel, node)
+        self.update_derived_fields()
+        
     def edit_new(self):
         
         init_values = self.viewmodel.init_values

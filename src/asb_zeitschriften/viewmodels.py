@@ -335,12 +335,12 @@ class BroschPage(GenericPage):
         # Row 11
 
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik 1:'), 1, 11, 1, 1)
-        self.systematik1_entry = Gtk.Entry(width_chars=WIDTH_5)
-        self.grid.attach(self.systematik1_entry, 2, 11, 5, 1)
+        self.systematik1_label = Gtk.Entry(width_chars=WIDTH_5)
+        self.grid.attach(self.systematik1_label, 2, 11, 5, 1)
     
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik 2:'), 7, 11, 1, 1)
-        self.systematik2_entry = Gtk.Entry(width_chars=WIDTH_5)
-        self.grid.attach(self.systematik2_entry, 8, 11, 5, 1)
+        self.systematik2_label = Gtk.Entry(width_chars=WIDTH_5)
+        self.grid.attach(self.systematik2_label, 8, 11, 5, 1)
 
         # Row 12
 
@@ -488,11 +488,11 @@ class BroschPage(GenericPage):
     hauptsystematik = property(lambda self: self._get_int_label(self.hauptsystematik_label),
                                lambda self, v: self._set_int_label(v, self.hauptsystematik_label))
 
-    systematik1 = property(lambda self: self._get_string_value(self.systematik1_entry),
-                      lambda self, v: self._set_string_value(v, self.systematik1_entry))
+    systematik1 = property(lambda self: self._get_string_value(self.systematik1_label),
+                      lambda self, v: self._set_string_value(v, self.systematik1_label))
 
-    systematik2 = property(lambda self: self._get_string_value(self.systematik2_entry),
-                      lambda self, v: self._set_string_value(v, self.systematik2_entry))
+    systematik2 = property(lambda self: self._get_string_value(self.systematik2_label),
+                      lambda self, v: self._set_string_value(v, self.systematik2_label))
     
     bemerkung = property(lambda self: self._get_string_value(self.bemerkung_entry),
                       lambda self, v: self._set_string_value(v, self.bemerkung_entry))
@@ -862,12 +862,12 @@ class ZeitschriftenPage(GenericPage):
 
         # Row 8
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik 1:'), 1, 8, 1, 1)
-        self.systematik1_entry = Gtk.Entry(width_chars=WIDTH_2)
-        self.grid.attach(self.systematik1_entry, 2, 8, 2, 1)
+        self.systematik1_label = Gtk.Entry(width_chars=WIDTH_2)
+        self.grid.attach(self.systematik1_label, 2, 8, 2, 1)
 
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik 2:'), 4, 8, 1, 1)
-        self.systematik2_entry = Gtk.Entry(width_chars=WIDTH_2)
-        self.grid.attach(self.systematik2_entry, 5, 8, 2, 1)
+        self.systematik2_label = Gtk.Entry(width_chars=WIDTH_2)
+        self.grid.attach(self.systematik2_label, 5, 8, 2, 1)
 
         self.grid.attach(Gtk.Label(halign=Gtk.Align.START, label='Systematik 3:'), 7, 8, 1, 1)
         self.systematik3_entry = Gtk.Entry(width_chars=WIDTH_1)
@@ -1064,10 +1064,10 @@ class ZeitschriftenPage(GenericPage):
                     lambda self, v: self._set_bool_value(v, self.unikat_checkbutton))
     schuelerzeitung = property(lambda self: self._get_bool_value(self.schuelerzeitung_checkbutton),
                     lambda self, v: self._set_bool_value(v, self.schuelerzeitung_checkbutton))
-    systematik1 = property(lambda self: self._get_string_value(self.systematik1_entry),
-                    lambda self, v: self._set_string_value(v, self.systematik1_entry))
-    systematik2 = property(lambda self: self._get_string_value(self.systematik2_entry),
-                    lambda self, v: self._set_string_value(v, self.systematik2_entry))
+    systematik1 = property(lambda self: self._get_string_value(self.systematik1_label),
+                    lambda self, v: self._set_string_value(v, self.systematik1_label))
+    systematik2 = property(lambda self: self._get_string_value(self.systematik2_label),
+                    lambda self, v: self._set_string_value(v, self.systematik2_label))
     systematik3 = property(lambda self: self._get_string_value(self.systematik3_entry),
                     lambda self, v: self._set_string_value(v, self.systematik3_entry))
     digitalisiert = property(lambda self: self._get_bool_value(self.digitalisiert_checkbutton),

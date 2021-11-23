@@ -7,14 +7,16 @@ from injector import Injector, singleton, inject, Module, provider
 import sys
 import resources
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QTabWidget,\
-    QGridLayout, QLineEdit, QLabel, QAction, QMenu, QCheckBox, QFileDialog
+    QGridLayout, QLineEdit, QLabel, QAction, QMenu, QCheckBox, QFileDialog,\
+    QComboBox, QPushButton
 from asb_zeitschriften.broschdaos import DataError
 from asb_zeitschriften.presenters import BroschPresenter, ZeitschriftenPresenter,\
     GroupPresenter, GenericPresenter
 from PyQt5.QtGui import QIcon
 from asb_zeitschriften.qtdialogs import BroschSignatureDialog, BroschFilterDialog,\
     GenericFilterDialog, GruppenFilterDialog, ZeitschFilterDialog,\
-    GenericSearchDialog, BroschSearchDialog, QuestionDialog
+    GenericSearchDialog, BroschSearchDialog, QuestionDialog,\
+    SystematikSelectDialog
 from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
 from asb_systematik.SystematikDao import AlexandriaDbModule
 
@@ -104,12 +106,14 @@ class GenericTab(QWidget, ViewmodelMixin):
     def __init__(self,
                  presenter: GenericPresenter,
                  status_manager: StatusManager,
+                 question_dialog: QuestionDialog,
                  filter_dialog: GenericFilterDialog,
                  search_dialog: GenericSearchDialog):
         
         super().__init__()
         
         self.status_manager = status_manager
+        self.question_dialog = question_dialog
         self.filter_dialog = filter_dialog
         self.search_dialog = search_dialog
 
@@ -189,13 +193,18 @@ class BroschTab(GenericTab):
     def __init__(self,
                  presenter: BroschPresenter,
                  status_manager: StatusManager,
+                 question_dialog: QuestionDialog,
                  brosch_filter_dialog: BroschFilterDialog,
-                 brosch_search_dialog: BroschSearchDialog):
+                 brosch_search_dialog: BroschSearchDialog,
+                 systematik_select_dialog: SystematikSelectDialog):
         
         super().__init__(presenter,
                          status_manager,
+                         question_dialog,
                          brosch_filter_dialog,
                          brosch_search_dialog)
+        
+        self.systematik_select_dialog = systematik_select_dialog
         
     def add_widgets(self):
         
@@ -261,15 +270,18 @@ class BroschTab(GenericTab):
         self.thema_entry = QLineEdit()
         self.grid_layout.addWidget(self.thema_entry, 8, 7, 1, 5)
 
-        self.grid_layout.addWidget(QLabel("Systematik 1:"), 9, 0, 1, 1)
-        self.systematik1_entry = QLineEdit()
-        self.systematik1_entry.setEnabled(False)
-        self.grid_layout.addWidget(self.systematik1_entry, 9, 1, 1, 5)
+        self.grid_layout.addWidget(QLabel("Systematik:"), 9, 0, 1, 1)
+        self.systematik_combobox = QComboBox()
+        self.systematik_values = []
+        self.grid_layout.addWidget(self.systematik_combobox, 9, 1, 1, 7)
+        
+        syst_add_button = QPushButton("Hinzufügen")
+        self.grid_layout.addWidget(syst_add_button, 9, 8, 1, 2)
+        syst_add_button.clicked.connect(lambda: self.presenter.add_systematik_node())
 
-        self.grid_layout.addWidget(QLabel("Systematik 2:"), 9, 6, 1, 1)
-        self.systematik2_entry = QLineEdit()
-        self.systematik2_entry.setEnabled(False)
-        self.grid_layout.addWidget(self.systematik2_entry, 9, 7, 1, 5)
+        syst_remove_button = QPushButton("Entfernen")
+        self.grid_layout.addWidget(syst_remove_button, 9, 10, 1, 2)
+        syst_remove_button.clicked.connect(self._remove_systematik)
 
         self.grid_layout.addWidget(QLabel("Bemerkung:"), 10, 0, 1, 1)
         self.bemerkung_entry = QLineEdit()
@@ -313,7 +325,52 @@ class BroschTab(GenericTab):
         self.grid_layout.addWidget(QLabel("Gruppe:"), 14, 0, 1, 1)
         self.gruppe_label = QLabel()
         self.grid_layout.addWidget(self.gruppe_label, 14, 1, 1, 11)
+
+        self.grid_layout.addWidget(QLabel("Systematik 1:"), 15, 0, 1, 1)
+        self.systematik1_label = QLabel()
+        self.grid_layout.addWidget(self.systematik1_label, 15, 1, 1, 5)
+
+        self.grid_layout.addWidget(QLabel("Systematik 2:"), 15, 6, 1, 1)
+        self.systematik2_label = QLabel()
+        self.grid_layout.addWidget(self.systematik2_label, 15, 7, 1, 5)
+
+    def setEnabled(self, status: bool):
         
+        self.titel_entry.setEnabled(status)
+        self.untertitel_entry.setEnabled(status)
+        self.autor_name_entry.setEnabled(status)
+        self.vorname_entry.setEnabled(status)
+        self.herausgeber_entry.setEnabled(status)
+        self.visdp_entry.setEnabled(status)
+        self.reihe_entry.setEnabled(status)
+        self.verlag_entry.setEnabled(status)
+        self.ort_entry.setEnabled(status)
+        self.jahr_entry.setEnabled(status)
+        self.seitenzahl_entry.setEnabled(status)
+        self.auflage_entry.setEnabled(status)
+        self.exemplare_entry.setEnabled(status)
+        self.spender_entry.setEnabled(status)
+        self.thema_entry.setEnabled(status)
+        self.systematik_combobox.setEnabled(True)
+        self.bemerkung_entry.setEnabled(status)
+        self.doppel_checkbox.setEnabled(status)
+        self.digitalisiert_checkbox.setEnabled(status)
+        self.beschaedigt_checkbox.setEnabled(status)
+        self.verschollen_checkbox.setEnabled(status)
+            
+    def setDisabled(self, status: bool):
+
+        self.setEnabled(not status)
+        
+    def _get_new_systematik_node(self):
+        
+        if self.systematik_select_dialog.exec():
+            return self.systematik_select_dialog.selected
+        
+    def _remove_systematik(self):
+        
+        self.presenter.remove_systematik_node() 
+
     def _get_init_values(self):
         
         dialog = BroschSignatureDialog()
@@ -372,7 +429,27 @@ class BroschTab(GenericTab):
             return True
         else:
             return False
+    
         
+    def _set_systematikpunkte(self, punkte):
+        
+        self.systematik_combobox.clear()
+        self.systematik_values = []
+        for punkt in punkte:
+            self.systematik_combobox.addItem("%s" % punkt)
+            self.systematik_values.append(punkt)
+    
+    def _get_current_systematik_node(self):
+        
+        index = self.systematik_combobox.currentIndex()
+        if index is None:
+            return None
+        return self.systematik_values[index]
+    
+    def _get_systematik_node_removal_confirmation(self):
+        
+        return self.question_dialog.exec("Willst Du den aktuellen Systematikverweis\nwirklich löschen?")
+          
     titel = property(lambda self: self._get_string_value(self.titel_entry),
                      lambda self, v: self._set_string_value(self.titel_entry, v))
 
@@ -417,12 +494,14 @@ class BroschTab(GenericTab):
     
     thema = property(lambda self: self._get_string_value(self.thema_entry),
                       lambda self, v: self._set_string_value(self.thema_entry, v))
-
-    systematik1 = property(lambda self: self._get_string_value(self.systematik1_entry),
-                      lambda self, v: self._set_string_value(self.systematik1_entry, v))
     
-    systematik2 = property(lambda self: self._get_string_value(self.systematik2_entry),
-                      lambda self, v: self._set_string_value(self.systematik2_entry, v))
+    systematikpunkte = property(None, lambda self, v: self._set_systematikpunkte(v))
+
+    systematik1 = property(lambda self: self._get_string_value(self.systematik1_label),
+                      lambda self, v: self._set_string_value(self.systematik1_label, v))
+    
+    systematik2 = property(lambda self: self._get_string_value(self.systematik2_label),
+                      lambda self, v: self._set_string_value(self.systematik2_label, v))
     
     bemerkung = property(lambda self: self._get_string_value(self.bemerkung_entry),
                       lambda self, v: self._set_string_value(self.bemerkung_entry, v))
@@ -455,11 +534,14 @@ class BroschTab(GenericTab):
     gruppe = property(lambda self: self._get_string_value(self.gruppe_label),
                         lambda self, v: self._set_string_value(self.gruppe_label, v))
 
+    current_systematik_node = property(_get_current_systematik_node)
+    
     # Dialog properties
     init_values = property(lambda self: self._get_init_values())
     new_file = property(_get_new_file)
     confirm_remove_file = property(_confirm_remove_file)
-
+    new_systematik_node = property(_get_new_systematik_node)
+    systematik_node_removal_confirmation = property(_get_systematik_node_removal_confirmation)
     # Not yet implemented    
     new_group = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     list_file = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -472,9 +554,9 @@ class GruppenTab(GenericTab):
     tab_title = "Gruppen"
     
     @inject
-    def __init__(self, presenter: GroupPresenter, mode_change_manager: StatusManager, filter_dialog: GruppenFilterDialog):
+    def __init__(self, presenter: GroupPresenter, mode_change_manager: StatusManager, question_dialog: QuestionDialog, filter_dialog: GruppenFilterDialog):
         
-        super().__init__(presenter, mode_change_manager, filter_dialog, None)
+        super().__init__(presenter, mode_change_manager, question_dialog, filter_dialog, None)
 
     def add_widgets(self):
         
@@ -509,9 +591,10 @@ class ZeitschTab(GenericTab):
     tab_title = "Zeitschriften"
     
     @inject
-    def __init__(self, presenter: ZeitschriftenPresenter, mode_change_manager: StatusManager, filter_dialog: ZeitschFilterDialog):
+    def __init__(self, presenter: ZeitschriftenPresenter, mode_change_manager: StatusManager,
+                 question_dialog: QuestionDialog, filter_dialog: ZeitschFilterDialog):
         
-        super().__init__(presenter, mode_change_manager, filter_dialog, None)
+        super().__init__(presenter, mode_change_manager, question_dialog, filter_dialog, None)
 
     def add_widgets(self):
 
