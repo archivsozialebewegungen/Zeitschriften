@@ -179,6 +179,16 @@ class GenericTab(QWidget, ViewmodelMixin):
             record = self.search_dialog.selected_record
             if record is not None:
                 self.presenter.fetch_by_id(record.id)
+                
+    def setEnabled(self, status: bool):
+    
+        raise Exception("Implement in child class")    
+            
+    def setDisabled(self, status: bool):
+
+        self.setEnabled(not status)
+        
+
         
     mode = property(_get_mode, _set_mode)
     errormessage = property(None, _set_message)
@@ -558,6 +568,10 @@ class GruppenTab(GenericTab):
         
         super().__init__(presenter, mode_change_manager, question_dialog, filter_dialog, None)
 
+    def setEnabled(self, status: bool):
+
+        self.gruppen_name_entry.setEnabled(status)
+    
     def add_widgets(self):
         
         super().add_widgets()
@@ -596,32 +610,113 @@ class ZeitschTab(GenericTab):
         
         super().__init__(presenter, mode_change_manager, question_dialog, filter_dialog, None)
 
+    def setEnabled(self, status: bool):
+        
+        self.titel_entry.setEnabled(status)
+        self.untertitel_entry.setEnabled(status)
+        self.herausgeber_entry.setEnabled(status)
+        self.verlag_entry.setEnabled(status)
+        self.ort_entry.setEnabled(status)
+        self.land_entry.setEnabled(status)
+        self.plz_entry.setEnabled(status)
+        self.plzalt_entry.setEnabled(status)
+        self.standort_entry.setEnabled(status)
+        self.spender_entry.setEnabled(status)
+        self.zdbid_entry.setEnabled(status)
+        self.bemerkung_entry.setEnabled(status)
+        self.erster_jg_entry.setEnabled(status)
+        self.fortlaufendbis_entry.setEnabled(status)
+        self.fortlaufend_checkbox.setEnabled(status)
+        self.eingestellt_checkbox.setEnabled(status)
+        self.unimeld_checkbox.setEnabled(status)
+
     def add_widgets(self):
 
         super().add_widgets()
         
-        self.grid_layout.addWidget(QLabel("Titel"), 0, 0)
+        self.grid_layout.addWidget(QLabel("Titel"), 0, 0, 1, 1)
         self.titel_entry = QLineEdit()
-        self.grid_layout.addWidget(self.titel_entry, 0, 1)
+        self.grid_layout.addWidget(self.titel_entry, 0, 1, 1, 11)
+
+        self.grid_layout.addWidget(QLabel("Untertitel"), 1, 0, 1, 1)
+        self.untertitel_entry = QLineEdit()
+        self.grid_layout.addWidget(self.untertitel_entry, 1, 1, 1, 11)
+
+        self.grid_layout.addWidget(QLabel("Herausgeber"), 2, 0, 1, 1)
+        self.herausgeber_entry = QLineEdit()
+        self.grid_layout.addWidget(self.herausgeber_entry, 2, 1, 1, 5)
+
+        self.grid_layout.addWidget(QLabel("Verlag"), 2, 6, 1, 1)
+        self.verlag_entry = QLineEdit()
+        self.grid_layout.addWidget(self.verlag_entry, 2, 7, 1, 5)
+
+        self.grid_layout.addWidget(QLabel("Ort"), 3, 0, 1, 1)
+        self.ort_entry = QLineEdit()
+        self.grid_layout.addWidget(self.ort_entry, 3, 1, 1, 2)
+
+        self.grid_layout.addWidget(QLabel("Land"), 3, 3, 1, 1)
+        self.land_entry = QLineEdit()
+        self.grid_layout.addWidget(self.land_entry, 3, 4, 1, 2)
+
+        self.grid_layout.addWidget(QLabel("PLZ"), 3, 6, 1, 1)
+        self.plz_entry = QLineEdit()
+        self.grid_layout.addWidget(self.plz_entry, 3, 7, 1, 2)
+
+        self.grid_layout.addWidget(QLabel("Alte PLZ"), 3, 9, 1, 1)
+        self.plzalt_entry = QLineEdit()
+        self.grid_layout.addWidget(self.plzalt_entry, 3, 10, 1, 2)
+
+        self.grid_layout.addWidget(QLabel("Standort"), 4, 0, 1, 1)
+        self.standort_entry = QLineEdit()
+        self.grid_layout.addWidget(self.standort_entry, 4, 1, 1, 5)
+
+        self.grid_layout.addWidget(QLabel("Spender*in"), 4, 6, 1, 1)
+        self.spender_entry = QLineEdit()
+        self.grid_layout.addWidget(self.spender_entry, 4, 7, 1, 2)
+
+        self.grid_layout.addWidget(QLabel("ZDB ID"), 4, 9, 1, 1)
+        self.zdbid_entry = QLineEdit()
+        self.grid_layout.addWidget(self.zdbid_entry, 4, 10, 1, 2)
+
+        self.grid_layout.addWidget(QLabel("Bemerkung"), 5, 0, 1, 1)
+        self.bemerkung_entry = QLineEdit()
+        self.grid_layout.addWidget(self.bemerkung_entry, 5, 1, 1, 11)
+
+        self.grid_layout.addWidget(QLabel("Erster\nJahrgang"), 6, 0, 1, 1)
+        self.erster_jg_entry = QLineEdit()
+        self.grid_layout.addWidget(self.erster_jg_entry, 6, 1, 1, 1)
+
+        self.grid_layout.addWidget(QLabel("Fortlau-\nfend bis"), 6, 2, 1, 1)
+        self.fortlaufendbis_entry = QLineEdit()
+        self.grid_layout.addWidget(self.fortlaufendbis_entry, 6, 3, 1, 3)
+
+        self.fortlaufend_checkbox = QCheckBox("Fortlaufend")
+        self.grid_layout.addWidget(self.fortlaufend_checkbox, 6, 6, 1, 2)
+
+        self.eingestellt_checkbox = QCheckBox("Eingestellt")
+        self.grid_layout.addWidget(self.eingestellt_checkbox, 6, 8, 1, 2)
+
+        self.unimeld_checkbox = QCheckBox("ZDB Meldung")
+        self.grid_layout.addWidget(self.unimeld_checkbox, 6, 10, 1, 2)
 
     titel = property(lambda self: self._get_string_value(self.titel_entry), lambda self, v: self._set_string_value(self.titel_entry, v))
+    untertitel = property(lambda self: self._get_string_value(self.untertitel_entry), lambda self, v: self._set_string_value(self.untertitel_entry, v))
+    herausgeber = property(lambda self: self._get_string_value(self.herausgeber_entry), lambda self, v: self._set_string_value(self.herausgeber_entry, v))
+    verlag = property(lambda self: self._get_string_value(self.verlag_entry), lambda self, v: self._set_string_value(self.verlag_entry, v))
+    ort = property(lambda self: self._get_string_value(self.ort_entry), lambda self, v: self._set_string_value(self.ort_entry, v))
+    land = property(lambda self: self._get_string_value(self.land_entry), lambda self, v: self._set_string_value(self.land_entry, v))
+    plz = property(lambda self: self._get_int_value(self.plz_entry, "PLZ"), lambda self, v: self._set_int_value(self.plz_entry, v))
+    plzalt = property(lambda self: self._get_int_value(self.plzalt_entry, "Alte PLZ"), lambda self, v: self._set_int_value(self.plzalt_entry, v))
+    standort = property(lambda self: self._get_string_value(self.standort_entry), lambda self, v: self._set_string_value(self.standort_entry, v))
+    spender = property(lambda self: self._get_string_value(self.spender_entry), lambda self, v: self._set_string_value(self.spender_entry, v))
+    zdbid = property(lambda self: self._get_string_value(self.zdbid_entry), lambda self, v: self._set_string_value(self.zdbid_entry, v))
+    bemerkung = property(lambda self: self._get_string_value(self.bemerkung_entry), lambda self, v: self._set_string_value(self.bemerkung_entry, v))
+    erster_jg = property(lambda self: self._get_int_value(self.plzalt_entry, "Erster Jahrgang"), lambda self, v: self._set_int_value(self.erster_jg_entry, v))
+    fortlaufendbis = property(lambda self: self._get_int_value(self.fortlaufendbis_entry, "Fortlaufend bis"), lambda self, v: self._set_int_value(self.fortlaufendbis_entry, v))
+    fortlaufend = property(lambda self: self._get_boolean_value(self.fortlaufend_checkbox), lambda self, v: self._set_boolean_value(self.fortlaufend_checkbox, v))
+    eingestellt = property(lambda self: self._get_boolean_value(self.eingestellt_checkbox), lambda self, v: self._set_boolean_value(self.eingestellt_checkbox, v))
+    unimeld = property(lambda self: self._get_boolean_value(self.unimeld_checkbox), lambda self, v: self._set_boolean_value(self.unimeld_checkbox, v))
 
-    zdbid = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    untertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    herausgeber = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    verlag = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    ort = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    land = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    plz = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    plzalt = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    standort = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    spender = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    bemerkung = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    erster_jg = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    fortlaufendbis = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    fortlaufend = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    eingestellt = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    unimeldung = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     laufend = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     koerperschaft = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     komplett = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -774,11 +869,11 @@ class Window(QMainWindow):
         self.save_action = QAction(QIcon(":save.svg"), "&Speichern", self)
         self.save_action.triggered.connect(lambda value: self.current_tab.save())
         self.delete_action = QAction(QIcon(":delete.svg"), "&Löschen", self)
-        self.delete_action.triggered.connect(lambda value: self.current_tab.save())
+        self.delete_action.triggered.connect(lambda value: self.current_tab.delete())
         self.cancel_action = QAction(QIcon(":cancel.svg"), "A&bbrechen", self)
         self.cancel_action.triggered.connect(lambda value: self.current_tab.cancel())
         self.new_action = QAction(QIcon(":new.svg"), "&Anlegen", self)
-        self.new_action.triggered.connect(lambda value: self.current_tab.edit_new())
+        self.new_action.triggered.connect(lambda value: self.current_tab.presenter.edit_new())
         self.search_action = QAction(QIcon(":search.svg"), "S&uchen", self)
         self.search_action.triggered.connect(self.search)
         self.filter_action = QAction(QIcon(":filter.svg"), "&Filtern", self)
