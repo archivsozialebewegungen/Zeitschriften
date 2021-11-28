@@ -508,6 +508,8 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.viewmodel.gruppe = self._get_gruppenname()
         self.viewmodel.jahrgaenge = self._get_jahrgaenge()
         self.set_nummern()
+
+        self.viewmodel.systematikpunkte = self.zeitschriften_service.fetch_systematik_nodes(self.viewmodel)
         
     def submit_zdb_bestand(self):
         

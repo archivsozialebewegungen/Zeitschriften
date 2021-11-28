@@ -165,6 +165,15 @@ BROSCH2SYST_TABLE = Table(
     UniqueConstraint('syst_id', 'brosch_id')
 )
 
+ZEITSCH2SYST_TABLE = Table(
+    'zeitschtosyst',
+    ALEXANDRIA_METADATA,
+    Column('syst_id', Integer, ForeignKey("systematik.id")),
+    Column('zeitsch_id', Integer, ForeignKey("zeitschriften.id")),
+    Column('standort', Boolean),
+    UniqueConstraint('syst_id', 'zeitsch_id')
+)
+
 class Group:
     
     def __init__(self):
@@ -1318,7 +1327,37 @@ class ZeitschriftenDao(GenericDao):
         for row in result.fetchall():
             nachfolger.append(self._map_row(row, Zeitschrift()))
         return nachfolger
+
+    def fetch_systematik_ids(self, zeitsch: Zeitschrift):
+        
+        stmt = select([ZEITSCH2SYST_TABLE]).where(ZEITSCH2SYST_TABLE.c.zeitsch_id == zeitsch.id)
+        result = self.connection.execute(stmt)
+        syst_ids = []
+        for record in result.fetchall():
+            syst_ids.append(record[ZEITSCH2SYST_TABLE.c.syst_id])
+        return syst_ids
     
+    def add_syst_join(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+        
+        stmt = insert(ZEITSCH2SYST_TABLE).values(syst_id=systematik_node.id, zeitsch_id=zeitsch.id)
+        try:
+            self.connection.execute(stmt)
+        except IntegrityError:
+            # Already inserted
+            pass
+
+    def del_syst_join(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+        
+        stmt = delete(ZEITSCH2SYST_TABLE).where(and_(ZEITSCH2SYST_TABLE.c.syst_id == systematik_node.id, 
+                                                     ZEITSCH2SYST_TABLE.c.zeitsch_id == zeitsch.id))
+        self.connection.execute(stmt)
+
+    def set_syst_as_standort(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+        
+        stmt = update(ZEITSCH2SYST_TABLE).values(standort = True).\
+            where(and_(ZEITSCH2SYST_TABLE.c.syst_id == systematik_node.id, 
+                        ZEITSCH2SYST_TABLE.c.brosch_id == zeitsch.id))
+        self.connection.execute(stmt)
     
     
 class JahrgaengeDao(GenericDao):

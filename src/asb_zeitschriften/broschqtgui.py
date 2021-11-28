@@ -188,8 +188,25 @@ class GenericTab(QWidget, ViewmodelMixin):
 
         self.setEnabled(not status)
         
-
+    def _set_systematikpunkte(self, punkte):
         
+        self.systematik_combobox.clear()
+        self.systematik_values = []
+        for punkt in punkte:
+            self.systematik_combobox.addItem("%s" % punkt)
+            self.systematik_values.append(punkt)
+    
+    def _get_current_systematik_node(self):
+        
+        index = self.systematik_combobox.currentIndex()
+        if index is None:
+            return None
+        return self.systematik_values[index]
+    
+    def _get_systematik_node_removal_confirmation(self):
+        
+        return self.question_dialog.exec("Willst Du den aktuellen Systematikverweis\nwirklich löschen?")
+                  
     mode = property(_get_mode, _set_mode)
     errormessage = property(None, _set_message)
     new_filter = property(_get_filter)
@@ -441,25 +458,6 @@ class BroschTab(GenericTab):
             return False
     
         
-    def _set_systematikpunkte(self, punkte):
-        
-        self.systematik_combobox.clear()
-        self.systematik_values = []
-        for punkt in punkte:
-            self.systematik_combobox.addItem("%s" % punkt)
-            self.systematik_values.append(punkt)
-    
-    def _get_current_systematik_node(self):
-        
-        index = self.systematik_combobox.currentIndex()
-        if index is None:
-            return None
-        return self.systematik_values[index]
-    
-    def _get_systematik_node_removal_confirmation(self):
-        
-        return self.question_dialog.exec("Willst Du den aktuellen Systematikverweis\nwirklich löschen?")
-          
     titel = property(lambda self: self._get_string_value(self.titel_entry),
                      lambda self, v: self._set_string_value(self.titel_entry, v))
 
@@ -544,14 +542,14 @@ class BroschTab(GenericTab):
     gruppe = property(lambda self: self._get_string_value(self.gruppe_label),
                         lambda self, v: self._set_string_value(self.gruppe_label, v))
 
-    current_systematik_node = property(_get_current_systematik_node)
+    current_systematik_node = property(lambda self: self._get_current_systematik_node())
     
     # Dialog properties
     init_values = property(lambda self: self._get_init_values())
     new_file = property(_get_new_file)
     confirm_remove_file = property(_confirm_remove_file)
     new_systematik_node = property(_get_new_systematik_node)
-    systematik_node_removal_confirmation = property(_get_systematik_node_removal_confirmation)
+    systematik_node_removal_confirmation = property(lambda self: self._get_systematik_node_removal_confirmation())
     # Not yet implemented    
     new_group = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     list_file = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -699,6 +697,41 @@ class ZeitschTab(GenericTab):
         self.unimeld_checkbox = QCheckBox("ZDB Meldung")
         self.grid_layout.addWidget(self.unimeld_checkbox, 6, 10, 1, 2)
 
+        self.laufend_checkbox = QCheckBox("Laufender Bezug")
+        self.grid_layout.addWidget(self.laufend_checkbox, 7, 1, 1, 1)
+
+        self.koerperschaft_checkbox = QCheckBox("Körperschaft")
+        self.grid_layout.addWidget(self.koerperschaft_checkbox, 7, 2, 1, 2)
+
+        self.komplett_checkbox = QCheckBox("Komplett")
+        self.grid_layout.addWidget(self.komplett_checkbox, 7, 4, 1, 2)
+
+        self.unikat_checkbox = QCheckBox("Nur hier")
+        self.grid_layout.addWidget(self.unikat_checkbox, 7, 6, 1, 2)
+
+        self.schuelerzeitung_checkbox = QCheckBox("Schüler-\nzeitung")
+        self.grid_layout.addWidget(self.schuelerzeitung_checkbox, 7, 8, 1, 2)
+
+        self.digitalisiert_checkbox = QCheckBox("Digitalisiert")
+        self.grid_layout.addWidget(self.digitalisiert_checkbox, 7, 10, 1, 2)
+
+        self.grid_layout.addWidget(QLabel("Systematik:"), 8, 0, 1, 1)
+        self.systematik_combobox = QComboBox()
+        self.systematik_values = []
+        self.grid_layout.addWidget(self.systematik_combobox, 8, 1, 1, 6)
+        
+        self.standort_checkbox = QCheckBox("Ist Standort")
+        self.grid_layout.addWidget(self.standort_checkbox, 8, 7, 1, 1)
+        self.standort_checkbox.toggled.connect(lambda: self.presenter.toggle_systematik_standort())
+        
+        syst_add_button = QPushButton("Hinzufügen")
+        self.grid_layout.addWidget(syst_add_button, 8, 8, 1, 2)
+        syst_add_button.clicked.connect(lambda: self.presenter.add_systematik_node())
+
+        syst_remove_button = QPushButton("Entfernen")
+        self.grid_layout.addWidget(syst_remove_button, 8, 10, 1, 2)
+        syst_remove_button.clicked.connect(self._remove_systematik)
+
     titel = property(lambda self: self._get_string_value(self.titel_entry), lambda self, v: self._set_string_value(self.titel_entry, v))
     untertitel = property(lambda self: self._get_string_value(self.untertitel_entry), lambda self, v: self._set_string_value(self.untertitel_entry, v))
     herausgeber = property(lambda self: self._get_string_value(self.herausgeber_entry), lambda self, v: self._set_string_value(self.herausgeber_entry, v))
@@ -716,16 +749,19 @@ class ZeitschTab(GenericTab):
     fortlaufend = property(lambda self: self._get_boolean_value(self.fortlaufend_checkbox), lambda self, v: self._set_boolean_value(self.fortlaufend_checkbox, v))
     eingestellt = property(lambda self: self._get_boolean_value(self.eingestellt_checkbox), lambda self, v: self._set_boolean_value(self.eingestellt_checkbox, v))
     unimeld = property(lambda self: self._get_boolean_value(self.unimeld_checkbox), lambda self, v: self._set_boolean_value(self.unimeld_checkbox, v))
+    laufend = property(lambda self: self._get_boolean_value(self.laufend_checkbox), lambda self, v: self._set_boolean_value(self.laufend_checkbox, v))
+    koerperschaft = property(lambda self: self._get_boolean_value(self.koerperschaft_checkbox), lambda self, v: self._set_boolean_value(self.koerperschaft_checkbox, v))
+    komplett = property(lambda self: self._get_boolean_value(self.komplett_checkbox), lambda self, v: self._set_boolean_value(self.komplett_checkbox, v))
+    unikat = property(lambda self: self._get_boolean_value(self.unikat_checkbox), lambda self, v: self._set_boolean_value(self.unikat_checkbox, v))
+    schuelerzeitung = property(lambda self: self._get_boolean_value(self.schuelerzeitung_checkbox), lambda self, v: self._set_boolean_value(self.schuelerzeitung_checkbox, v))
+    digialisiert = property(lambda self: self._get_boolean_value(self.digitalisiert_checkbox), lambda self, v: self._set_boolean_value(self.digitalisiert_checkbox, v))
 
-    laufend = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    koerperschaft = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    komplett = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    unikat = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    schuelerzeitung = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
+    systematikpunkte = property(None, lambda self, v: self._set_systematikpunkte(v))
+
     systematik1 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     systematik2 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     systematik3 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    digitalisiert = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
+    
     verzeichnis = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     vorlaeufertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     nachfolgertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -745,6 +781,10 @@ class ZeitschTab(GenericTab):
     zdb_info = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     
     nummern = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
+
+    def _remove_systematik(self):
+        
+        pass
 
 class Window(QMainWindow):
 

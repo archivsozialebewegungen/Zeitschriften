@@ -205,11 +205,28 @@ def format_jahrgang_komplex(jg):
 class ZeitschriftenService:
 
     @inject
-    def __init__(self, jahrgaenge_dao: JahrgaengeDao):
+    def __init__(self, zeitsch_dao: ZeitschriftenDao, jahrgaenge_dao: JahrgaengeDao, systematik_dao: SystematikDao):
         
-        self.dao = jahrgaenge_dao
+        self.dao = zeitsch_dao
+        self.jg_dao = jahrgaenge_dao
+        self.syst_dao = systematik_dao
         self.last_number_re = re.compile('.*?(\d+)[^0-9]*$')
         self.trim_re = re.compile('^\s*(.*?)\s*$')
+
+    def fetch_systematik_nodes(self, zeitsch: Zeitschrift):
+        
+        nodes = []
+        for syst_id in self.dao.fetch_systematik_ids(zeitsch):
+            nodes.append(self.syst_dao.fetch_by_id(syst_id))
+        return nodes
+    
+    def add_systematik_node(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+        
+        self.dao.add_syst_join(zeitsch, systematik_node)
+
+    def remove_systematik_node(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+        
+        self.dao.del_syst_join(zeitsch, systematik_node)
 
     def fetch_new_number(self, zeitschrift):
         '''
@@ -244,7 +261,7 @@ class ZeitschriftenService:
     def add_new_number(self, zeitschrift, jahr, nummer):
 
         try:
-            jahrgang = self.dao.fetch_jahrgang_for_zeitschrift(zeitschrift, jahr)
+            jahrgang = self.jg_dao.fetch_jahrgang_for_zeitschrift(zeitschrift, jahr)
         except NoDataException:
             jahrgang = Jahrgang()
             jahrgang.jahr = jahr
@@ -255,12 +272,12 @@ class ZeitschriftenService:
             return
         
         jahrgang.nummern = self._add_number(jahrgang.nummern, nummer)
-        self.dao.save(jahrgang)
+        self.jg_dao.save(jahrgang)
         
     def get_bestand_vollstaendig(self, zeitschrift):
         
         nummern = []
-        jahrgaenge = self.dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
+        jahrgaenge = self.jg_dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
         for jahrgang in jahrgaenge:
             for nummer in extract_numbers(jahrgang.nummern, jahrgang):
                 nummern.append(nummer)
@@ -284,12 +301,12 @@ class ZeitschriftenService:
 
     def get_bestand(self, zeitschrift):
         
-        jahrgaenge = self.dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
+        jahrgaenge = self.jg_dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
         return self.format_jahrgangsliste(jahrgaenge, format=format_jahrgang_komplex)
     
     def get_bestandsluecken(self, zeitschrift):
 
-        jahrgaenge = self.dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
+        jahrgaenge = self.jg_dao.fetch_jahrgaenge_for_zeitschrift(zeitschrift, False)
         lueckenhaft = []
         for jg in jahrgaenge:
             if not jg.komplett:
@@ -303,7 +320,7 @@ class ZeitschriftenService:
     def _fetch_last_number_for_year(self, zeitschrift, jahr):
         
         try:
-            jahrgang = self.dao.fetch_jahrgang_for_zeitschrift(zeitschrift, jahr)
+            jahrgang = self.jg_dao.fetch_jahrgang_for_zeitschrift(zeitschrift, jahr)
         except NoDataException:
             raise MissingJahrgang()
 
