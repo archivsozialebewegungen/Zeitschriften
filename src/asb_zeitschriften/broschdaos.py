@@ -9,7 +9,7 @@ from sqlalchemy.sql.schema import Table, MetaData, Column, ForeignKey, \
     UniqueConstraint
 from sqlalchemy.sql.sqltypes import Integer, String, Boolean, Date
 from sqlalchemy.sql.expression import insert, select, update, and_, or_, text,\
-    delete
+    delete, join
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.sql.functions import count, func
 from sqlalchemy.engine import create_engine
@@ -22,7 +22,7 @@ from asb_zeitschriften.guiconstants import FILTER_PROPERTY_SYSTEMATIK,\
     FILTER_PROPERTY_ORT, FILTER_PROPERTY_NAME, COMBINATION_AND,\
     FILTER_PROPERTY_ZDB_MELDUNG
 from asb_systematik.SystematikDao import ALEXANDRIA_METADATA, DataError,\
-    NoDataException, SystematikNode
+    NoDataException, SystematikNode, SYSTEMATIK_TABLE
 
 GROUP_TABLE = Table(
     'gruppen',
@@ -1330,7 +1330,10 @@ class ZeitschriftenDao(GenericDao):
 
     def fetch_systematik_ids(self, zeitsch: Zeitschrift):
         
-        stmt = select([ZEITSCH2SYST_TABLE]).where(ZEITSCH2SYST_TABLE.c.zeitsch_id == zeitsch.id)
+        j = join(ZEITSCH2SYST_TABLE, SYSTEMATIK_TABLE, ZEITSCH2SYST_TABLE.c.syst_id == SYSTEMATIK_TABLE.c.id)
+        stmt = select([ZEITSCH2SYST_TABLE]).select_from(j).\
+            where(ZEITSCH2SYST_TABLE.c.zeitsch_id == zeitsch.id).\
+            order_by(SYSTEMATIK_TABLE.c.punkt, SYSTEMATIK_TABLE.c.roemisch, SYSTEMATIK_TABLE.c.sub)
         result = self.connection.execute(stmt)
         syst_ids = []
         for record in result.fetchall():
@@ -1352,14 +1355,25 @@ class ZeitschriftenDao(GenericDao):
                                                      ZEITSCH2SYST_TABLE.c.zeitsch_id == zeitsch.id))
         self.connection.execute(stmt)
 
-    def set_syst_as_standort(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+    def change_systematik_standort_status(self, zeitsch: Zeitschrift, systematik_node: SystematikNode, status: bool):
         
-        stmt = update(ZEITSCH2SYST_TABLE).values(standort = True).\
+        stmt = update(ZEITSCH2SYST_TABLE).values(standort = status).\
             where(and_(ZEITSCH2SYST_TABLE.c.syst_id == systematik_node.id, 
-                        ZEITSCH2SYST_TABLE.c.brosch_id == zeitsch.id))
+                        ZEITSCH2SYST_TABLE.c.zeitsch_id == zeitsch.id))
         self.connection.execute(stmt)
     
-    
+    def fetch_systematik_standort_status(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+        
+        print("Systematik id: %d" % systematik_node.id )
+        print("Zeitschriften id: %d" % zeitsch.id)
+        stmt = select([ZEITSCH2SYST_TABLE.c.standort]).\
+            where(and_(ZEITSCH2SYST_TABLE.c.syst_id == systematik_node.id, 
+                        ZEITSCH2SYST_TABLE.c.zeitsch_id == zeitsch.id))
+        
+        result = self.connection.execute(stmt)
+        value = result.scalar()    
+        return value
+        
 class JahrgaengeDao(GenericDao):
     
     @inject

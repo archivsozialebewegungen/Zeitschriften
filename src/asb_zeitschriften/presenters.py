@@ -476,12 +476,53 @@ class ZeitschriftenPresenter(GenericPresenter):
         self.zeitschriften_service = zeitschriften_service
         self.zdb_catalog = zdb_catalog
         self.meldungs_service = meldungs_service
+
+    def add_systematik_node(self):
+        
+        node = self.viewmodel.new_systematik_node
+        if node is None:
+            return
+        self.zeitschriften_service.add_systematik_node(self.viewmodel, node)
+        self.update_derived_fields()
+        
+    def remove_systematik_node(self):
+        
+        node = self.viewmodel.current_systematik_node
+        if node is None:
+            return
+        if self.viewmodel.systematik_node_removal_confirmation:
+            self.zeitschriften_service.remove_systematik_node(self.viewmodel, node)
+        self.update_derived_fields()
     
     def fetch_zdb_data(self):
         
         if self.viewmodel.zdbid is not None:
             self.viewmodel.zdb_info = "%s" % self.zdb_catalog.fetch_data(self.viewmodel.zdbid)
 
+    def toggle_systematik_standort(self):
+        
+        current_systematik_node = self.viewmodel.current_systematik_node
+        # Without node standort can't be set
+        if current_systematik_node is None:
+            self.viewmodel.systematik_as_standort = False
+            return
+        
+        new_status = self.viewmodel.systematik_as_standort
+        self.zeitschriften_service.change_systematik_standort_status(self.viewmodel, current_systematik_node, new_status)
+        
+    def show_current_systematik_standort_status(self):
+        
+        print("show status called")
+        
+        current_systematik_node = self.viewmodel.current_systematik_node
+        # Without node standort can't be set
+        if current_systematik_node is None:
+            self.viewmodel.systematik_as_standort = False
+            return
+        
+        value = self.zeitschriften_service.fetch_systematik_standort_status(self.viewmodel, current_systematik_node)
+        self.viewmodel.systematik_as_standort = value
+        
     def fetch_zdb_bestand(self):
         
         if self.viewmodel.zdbid is not None:
@@ -499,7 +540,7 @@ class ZeitschriftenPresenter(GenericPresenter):
         
         self.viewmodel.lastcheck = date.today()
         self.save()
-            
+        
     def update_derived_fields(self):
 
         self.viewmodel.mode = VIEW_MODE

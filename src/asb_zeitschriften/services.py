@@ -224,6 +224,14 @@ class ZeitschriftenService:
         
         self.dao.add_syst_join(zeitsch, systematik_node)
 
+    def change_systematik_standort_status(self, zeitsch: Zeitschrift, systematik_node: SystematikNode, status: bool):
+        
+        self.dao.change_systematik_standort_status(zeitsch, systematik_node, status)
+
+    def fetch_systematik_standort_status(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
+        
+        return self.dao.fetch_systematik_standort_status(zeitsch, systematik_node)
+
     def remove_systematik_node(self, zeitsch: Zeitschrift, systematik_node: SystematikNode):
         
         self.dao.del_syst_join(zeitsch, systematik_node)

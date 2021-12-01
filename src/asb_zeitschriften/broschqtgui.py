@@ -107,6 +107,7 @@ class GenericTab(QWidget, ViewmodelMixin):
                  presenter: GenericPresenter,
                  status_manager: StatusManager,
                  question_dialog: QuestionDialog,
+                 systematik_select_dialog: SystematikSelectDialog,
                  filter_dialog: GenericFilterDialog,
                  search_dialog: GenericSearchDialog):
         
@@ -116,6 +117,7 @@ class GenericTab(QWidget, ViewmodelMixin):
         self.question_dialog = question_dialog
         self.filter_dialog = filter_dialog
         self.search_dialog = search_dialog
+        self.systematik_select_dialog = systematik_select_dialog
 
         self.add_widgets()
         
@@ -193,8 +195,8 @@ class GenericTab(QWidget, ViewmodelMixin):
         self.systematik_combobox.clear()
         self.systematik_values = []
         for punkt in punkte:
-            self.systematik_combobox.addItem("%s" % punkt)
             self.systematik_values.append(punkt)
+            self.systematik_combobox.addItem("%s" % punkt)
     
     def _get_current_systematik_node(self):
         
@@ -206,11 +208,20 @@ class GenericTab(QWidget, ViewmodelMixin):
     def _get_systematik_node_removal_confirmation(self):
         
         return self.question_dialog.exec("Willst Du den aktuellen Systematikverweis\nwirklich löschen?")
+
+    def _get_new_systematik_node(self):
+        
+        if self.systematik_select_dialog.exec():
+            return self.systematik_select_dialog.selected
                   
     mode = property(_get_mode, _set_mode)
     errormessage = property(None, _set_message)
     new_filter = property(_get_filter)
+    new_systematik_node = property(lambda self: self._get_new_systematik_node())
+    systematik_node_removal_confirmation = property(lambda self: self._get_systematik_node_removal_confirmation())
+    current_systematik_node = property(lambda self: self._get_current_systematik_node())
     
+   
 @singleton
 class BroschTab(GenericTab):
     
@@ -221,17 +232,16 @@ class BroschTab(GenericTab):
                  presenter: BroschPresenter,
                  status_manager: StatusManager,
                  question_dialog: QuestionDialog,
+                 systematik_select_dialog: SystematikSelectDialog,
                  brosch_filter_dialog: BroschFilterDialog,
-                 brosch_search_dialog: BroschSearchDialog,
-                 systematik_select_dialog: SystematikSelectDialog):
+                 brosch_search_dialog: BroschSearchDialog):
         
         super().__init__(presenter,
                          status_manager,
                          question_dialog,
+                         systematik_select_dialog,
                          brosch_filter_dialog,
                          brosch_search_dialog)
-        
-        self.systematik_select_dialog = systematik_select_dialog
         
     def add_widgets(self):
         
@@ -308,7 +318,7 @@ class BroschTab(GenericTab):
 
         syst_remove_button = QPushButton("Entfernen")
         self.grid_layout.addWidget(syst_remove_button, 9, 10, 1, 2)
-        syst_remove_button.clicked.connect(self._remove_systematik)
+        syst_remove_button.clicked.connect(lambda: self.presenter.remove_systematik_node())
 
         self.grid_layout.addWidget(QLabel("Bemerkung:"), 10, 0, 1, 1)
         self.bemerkung_entry = QLineEdit()
@@ -387,16 +397,7 @@ class BroschTab(GenericTab):
             
     def setDisabled(self, status: bool):
 
-        self.setEnabled(not status)
-        
-    def _get_new_systematik_node(self):
-        
-        if self.systematik_select_dialog.exec():
-            return self.systematik_select_dialog.selected
-        
-    def _remove_systematik(self):
-        
-        self.presenter.remove_systematik_node() 
+        self.setEnabled(not status) 
 
     def _get_init_values(self):
         
@@ -542,14 +543,10 @@ class BroschTab(GenericTab):
     gruppe = property(lambda self: self._get_string_value(self.gruppe_label),
                         lambda self, v: self._set_string_value(self.gruppe_label, v))
 
-    current_systematik_node = property(lambda self: self._get_current_systematik_node())
-    
     # Dialog properties
     init_values = property(lambda self: self._get_init_values())
     new_file = property(_get_new_file)
     confirm_remove_file = property(_confirm_remove_file)
-    new_systematik_node = property(_get_new_systematik_node)
-    systematik_node_removal_confirmation = property(lambda self: self._get_systematik_node_removal_confirmation())
     # Not yet implemented    
     new_group = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     list_file = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -564,7 +561,7 @@ class GruppenTab(GenericTab):
     @inject
     def __init__(self, presenter: GroupPresenter, mode_change_manager: StatusManager, question_dialog: QuestionDialog, filter_dialog: GruppenFilterDialog):
         
-        super().__init__(presenter, mode_change_manager, question_dialog, filter_dialog, None)
+        super().__init__(presenter, mode_change_manager, question_dialog, None, filter_dialog, None)
 
     def setEnabled(self, status: bool):
 
@@ -604,9 +601,9 @@ class ZeitschTab(GenericTab):
     
     @inject
     def __init__(self, presenter: ZeitschriftenPresenter, mode_change_manager: StatusManager,
-                 question_dialog: QuestionDialog, filter_dialog: ZeitschFilterDialog):
+                 question_dialog: QuestionDialog, systematik_select_dialog: SystematikSelectDialog, filter_dialog: ZeitschFilterDialog):
         
-        super().__init__(presenter, mode_change_manager, question_dialog, filter_dialog, None)
+        super().__init__(presenter, mode_change_manager, question_dialog, systematik_select_dialog, filter_dialog, None)
 
     def setEnabled(self, status: bool):
         
@@ -627,6 +624,12 @@ class ZeitschTab(GenericTab):
         self.fortlaufend_checkbox.setEnabled(status)
         self.eingestellt_checkbox.setEnabled(status)
         self.unimeld_checkbox.setEnabled(status)
+        self.laufend_checkbox.setEnabled(status)
+        self.koerperschaft_checkbox.setEnabled(status)
+        self.komplett_checkbox.setEnabled(status)
+        self.unikat_checkbox.setEnabled(status)
+        self.schuelerzeitung_checkbox.setEnabled(status)
+        self.digitalisiert_checkbox.setEnabled(status)
 
     def add_widgets(self):
 
@@ -717,6 +720,7 @@ class ZeitschTab(GenericTab):
 
         self.grid_layout.addWidget(QLabel("Systematik:"), 8, 0, 1, 1)
         self.systematik_combobox = QComboBox()
+        self.systematik_combobox.currentTextChanged.connect(lambda: self.presenter.show_current_systematik_standort_status())
         self.systematik_values = []
         self.grid_layout.addWidget(self.systematik_combobox, 8, 1, 1, 6)
         
@@ -730,7 +734,7 @@ class ZeitschTab(GenericTab):
 
         syst_remove_button = QPushButton("Entfernen")
         self.grid_layout.addWidget(syst_remove_button, 8, 10, 1, 2)
-        syst_remove_button.clicked.connect(self._remove_systematik)
+        syst_remove_button.clicked.connect(lambda: self.presenter.remove_systematik_node())
 
     titel = property(lambda self: self._get_string_value(self.titel_entry), lambda self, v: self._set_string_value(self.titel_entry, v))
     untertitel = property(lambda self: self._get_string_value(self.untertitel_entry), lambda self, v: self._set_string_value(self.untertitel_entry, v))
@@ -755,8 +759,8 @@ class ZeitschTab(GenericTab):
     unikat = property(lambda self: self._get_boolean_value(self.unikat_checkbox), lambda self, v: self._set_boolean_value(self.unikat_checkbox, v))
     schuelerzeitung = property(lambda self: self._get_boolean_value(self.schuelerzeitung_checkbox), lambda self, v: self._set_boolean_value(self.schuelerzeitung_checkbox, v))
     digialisiert = property(lambda self: self._get_boolean_value(self.digitalisiert_checkbox), lambda self, v: self._set_boolean_value(self.digitalisiert_checkbox, v))
-
     systematikpunkte = property(None, lambda self, v: self._set_systematikpunkte(v))
+    systematik_as_standort = property(lambda self: self._get_boolean_value(self.standort_checkbox), lambda self, v: self._set_boolean_value(self.standort_checkbox, v))
 
     systematik1 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     systematik2 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
