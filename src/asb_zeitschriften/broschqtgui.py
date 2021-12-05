@@ -9,7 +9,7 @@ import resources
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QTabWidget,\
     QGridLayout, QLineEdit, QLabel, QAction, QMenu, QCheckBox, QFileDialog,\
     QComboBox, QPushButton
-from asb_zeitschriften.broschdaos import DataError
+from asb_zeitschriften.broschdaos import DataError, Jahrgang
 from asb_zeitschriften.presenters import BroschPresenter, ZeitschriftenPresenter,\
     GroupPresenter, GenericPresenter
 from PyQt5.QtGui import QIcon
@@ -19,6 +19,7 @@ from asb_zeitschriften.qtdialogs import BroschSignatureDialog, BroschFilterDialo
     SystematikSelectDialog
 from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
 from asb_systematik.SystematikDao import AlexandriaDbModule
+from pickle import NONE
 
 class ViewmodelMixin():
 
@@ -201,7 +202,7 @@ class GenericTab(QWidget, ViewmodelMixin):
     def _get_current_systematik_node(self):
         
         index = self.systematik_combobox.currentIndex()
-        if index is None:
+        if index is None or index == -1:
             return None
         return self.systematik_values[index]
     
@@ -213,6 +214,7 @@ class GenericTab(QWidget, ViewmodelMixin):
         
         if self.systematik_select_dialog.exec():
             return self.systematik_select_dialog.selected
+
                   
     mode = property(_get_mode, _set_mode)
     errormessage = property(None, _set_message)
@@ -605,6 +607,42 @@ class ZeitschTab(GenericTab):
         
         super().__init__(presenter, mode_change_manager, question_dialog, systematik_select_dialog, filter_dialog, None)
 
+    def _set_jahrgange(self, jahrgaenge: (Jahrgang,)):
+        
+        self.jahrgaenge_values = []
+        self.jahrgaenge_combobox.clear()
+        for jahrgang in jahrgaenge:
+            self.jahrgaenge_values.append(jahrgang)
+            self.jahrgaenge_combobox.addItem("%s" % jahrgang)
+
+    def _get_jahrgang_removal_confirmation(self):
+        
+        return self.question_dialog.exec("Willst Du den aktuellen Jahrgang\nwirklich löschen?")
+
+    def _get_current_jahrgang(self):
+        
+        index = self.jahrgaenge_combobox.currentIndex()
+        if index is None or index == -1:
+            return None
+        return self.jahrgaenge_values[index]
+    
+    def _get_current_jahrgangs_id(self):
+        
+        # TODO: Remove. Implemented for backwards compatibility with gtk interface
+        
+        current_jg = self._get_current_jahrgang()
+        if current_jg is None:
+            return None
+        return current_jg.id
+    
+    def _get_new_jahrgang(self):
+        
+        return None
+
+    def _edit_jahrgang(self):
+        
+        return None
+
     def setEnabled(self, status: bool):
         
         self.titel_entry.setEnabled(status)
@@ -719,14 +757,14 @@ class ZeitschTab(GenericTab):
         self.grid_layout.addWidget(self.digitalisiert_checkbox, 7, 10, 1, 2)
 
         self.grid_layout.addWidget(QLabel("Systematik:"), 8, 0, 1, 1)
-        self.systematik_combobox = QComboBox()
-        self.systematik_combobox.currentTextChanged.connect(lambda: self.presenter.show_current_systematik_standort_status())
         self.systematik_values = []
+        self.systematik_combobox = QComboBox()
         self.grid_layout.addWidget(self.systematik_combobox, 8, 1, 1, 6)
         
         self.standort_checkbox = QCheckBox("Ist Standort")
         self.grid_layout.addWidget(self.standort_checkbox, 8, 7, 1, 1)
         self.standort_checkbox.toggled.connect(lambda: self.presenter.toggle_systematik_standort())
+        self.systematik_combobox.currentTextChanged.connect(lambda: self.presenter.show_current_systematik_standort_status())
         
         syst_add_button = QPushButton("Hinzufügen")
         self.grid_layout.addWidget(syst_add_button, 8, 8, 1, 2)
@@ -735,6 +773,24 @@ class ZeitschTab(GenericTab):
         syst_remove_button = QPushButton("Entfernen")
         self.grid_layout.addWidget(syst_remove_button, 8, 10, 1, 2)
         syst_remove_button.clicked.connect(lambda: self.presenter.remove_systematik_node())
+
+        self.grid_layout.addWidget(QLabel("Jahrgänge:"), 9, 0, 1, 1)
+        self.jahrgaenge_values = []
+        self.jahrgaenge_combobox = QComboBox()
+        #self.jahrgaenge_combobox.currentTextChanged.connect(lambda: self.presenter.show_current_systematik_standort_status())
+        self.grid_layout.addWidget(self.jahrgaenge_combobox, 9, 1, 1, 2)
+
+        jg_add_button = QPushButton("Bearbeiten")
+        self.grid_layout.addWidget(jg_add_button, 9, 6, 1, 2)
+        jg_add_button.clicked.connect(lambda: self.presenter.edit_jahrgang())
+
+        jg_delete_button = QPushButton("Löschen")
+        self.grid_layout.addWidget(jg_delete_button, 9, 8, 1, 2)
+        jg_delete_button.clicked.connect(lambda: self.presenter.delete_jahrgang())
+
+        jg_new_button = QPushButton("Anlegen")
+        self.grid_layout.addWidget(jg_new_button, 9, 10, 1, 2)
+        jg_new_button.clicked.connect(lambda: self.presenter.new_jahrgang())
 
     titel = property(lambda self: self._get_string_value(self.titel_entry), lambda self, v: self._set_string_value(self.titel_entry, v))
     untertitel = property(lambda self: self._get_string_value(self.untertitel_entry), lambda self, v: self._set_string_value(self.untertitel_entry, v))
@@ -761,6 +817,7 @@ class ZeitschTab(GenericTab):
     digialisiert = property(lambda self: self._get_boolean_value(self.digitalisiert_checkbox), lambda self, v: self._set_boolean_value(self.digitalisiert_checkbox, v))
     systematikpunkte = property(None, lambda self, v: self._set_systematikpunkte(v))
     systematik_as_standort = property(lambda self: self._get_boolean_value(self.standort_checkbox), lambda self, v: self._set_boolean_value(self.standort_checkbox, v))
+    jahrgaenge = property(_get_current_jahrgangs_id, lambda self, v: self._set_jahrgange(v))
 
     systematik1 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     systematik2 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -770,7 +827,6 @@ class ZeitschTab(GenericTab):
     vorlaeufertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     nachfolgertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     gruppe = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    jahrgaenge = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     lastchange = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     lastcheck = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     lastsubmit = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))

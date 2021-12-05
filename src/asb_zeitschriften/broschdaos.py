@@ -311,18 +311,26 @@ class Jahrgang:
 
     def __str__(self):
         
-        komplett = "F"
+        status = "F"
         if self.komplett:
-            komplett = "K"
+            if self.fehlend is not None and self.fehlend.strip() != "":
+                status = "?"
+            else:
+                status = "K"
+        if self.beschaedigt is not None and self.beschaedigt.strip() != "":
+            status = "%sB" % status
         
+        if self.sondernummern is not None and self.sondernummern.strip() != "":
+            status = "S%s" % status
+            
         jahrgang = None
         if self.erster_jg is not None  and self.jahr is not None and self.erster_jg > 1000:
             jahrgang = self.jahr - self.erster_jg + 1
             
         if jahrgang is not None:
-            return "%d. Jahrgang %d [%s]" % (jahrgang, self.jahr, komplett)
+            return "%d. Jahrgang %d [%s]" % (jahrgang, self.jahr, status)
         elif self.jahr is not None:
-            return "%d [%s]" % (self.jahr, komplett)
+            return "%d [%s]" % (self.jahr, status)
         else:
             return "Jahr unbekannt"
 
