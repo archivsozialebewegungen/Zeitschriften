@@ -16,66 +16,11 @@ from PyQt5.QtGui import QIcon
 from asb_zeitschriften.qtdialogs import BroschSignatureDialog, BroschFilterDialog,\
     GenericFilterDialog, GruppenFilterDialog, ZeitschFilterDialog,\
     GenericSearchDialog, BroschSearchDialog, QuestionDialog,\
-    SystematikSelectDialog
+    SystematikSelectDialog, JahrgangEditDialog
 from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
 from asb_systematik.SystematikDao import AlexandriaDbModule
 from pickle import NONE
-
-class ViewmodelMixin():
-
-    def _set_string_value(self, widget: QLineEdit, value):
-        
-        if value is None:
-            widget.setText("")
-        else:
-            widget.setText(value)
-
-    def _get_string_value(self, widget: QLineEdit):
-        
-        value = widget.text().strip()
-        if value == "":
-            return None
-        else:
-            # TODO: Clean up database so we do not have trailing blanks
-            # Until then a strip() here will destroy the next() function
-            return widget.text()
-
-    def _set_int_value(self, widget: QLineEdit, value):
-        
-        if value is None:
-            widget.setText('')
-        else:
-            widget.setText("%d" % value)
-       
-    def _get_int_value(self, widget: QLineEdit, label: str):
-        
-        value = widget.text()
-        if value == '':
-            return None
-        try:
-            return int(value)
-        except ValueError:
-            raise DataError("'%s' ist kein gültiger Wert für '%s'. Zahl erwartet." % (value, label))
-        
-    def _set_boolean_value(self, widget: QCheckBox, value):
-        
-        if value is None:
-            widget.setChecked(False)
-        else:
-            widget.setChecked(value)
-        
-    def _get_boolean_value(self, widget: QCheckBox):
-        
-        return widget.isChecked()
-
-    def _not_implemented_set(self, value):
-        
-        pass
-    
-    def _not_implemented_get(self):
-        
-        pass
-    
+from asb_zeitschriften.qtmixins import ViewmodelMixin
 
 @singleton
 class StatusManager():
@@ -603,9 +548,13 @@ class ZeitschTab(GenericTab):
     
     @inject
     def __init__(self, presenter: ZeitschriftenPresenter, mode_change_manager: StatusManager,
-                 question_dialog: QuestionDialog, systematik_select_dialog: SystematikSelectDialog, filter_dialog: ZeitschFilterDialog):
+                 question_dialog: QuestionDialog,
+                 systematik_select_dialog: SystematikSelectDialog,
+                 filter_dialog: ZeitschFilterDialog,
+                 jahrgang_edit_dialog: JahrgangEditDialog):
         
         super().__init__(presenter, mode_change_manager, question_dialog, systematik_select_dialog, filter_dialog, None)
+        self.jahrgang_edit_dialog = jahrgang_edit_dialog
 
     def _set_jahrgange(self, jahrgaenge: (Jahrgang,)):
         
@@ -639,9 +588,9 @@ class ZeitschTab(GenericTab):
         
         return None
 
-    def _edit_jahrgang(self):
+    def edit_jahrgang(self):
         
-        return None
+        self.jahrgang_edit_dialog.exec(self.selected_jahrgang)
 
     def setEnabled(self, status: bool):
         
@@ -779,10 +728,11 @@ class ZeitschTab(GenericTab):
         self.jahrgaenge_combobox = QComboBox()
         #self.jahrgaenge_combobox.currentTextChanged.connect(lambda: self.presenter.show_current_systematik_standort_status())
         self.grid_layout.addWidget(self.jahrgaenge_combobox, 9, 1, 1, 2)
+        self.jahrgaenge_combobox.currentTextChanged.connect(lambda: self.presenter.update_jg_display())
 
         jg_add_button = QPushButton("Bearbeiten")
         self.grid_layout.addWidget(jg_add_button, 9, 6, 1, 2)
-        jg_add_button.clicked.connect(lambda: self.presenter.edit_jahrgang())
+        jg_add_button.clicked.connect(self.edit_jahrgang)
 
         jg_delete_button = QPushButton("Löschen")
         self.grid_layout.addWidget(jg_delete_button, 9, 8, 1, 2)
@@ -791,6 +741,18 @@ class ZeitschTab(GenericTab):
         jg_new_button = QPushButton("Anlegen")
         self.grid_layout.addWidget(jg_new_button, 9, 10, 1, 2)
         jg_new_button.clicked.connect(lambda: self.presenter.new_jahrgang())
+        
+        self.grid_layout.addWidget(QLabel("Vorhanden:"), 10, 0, 1, 1)
+        self.jg_nummern_label = QLabel("")
+        self.grid_layout.addWidget(self.jg_nummern_label, 10,1, 1, 11)
+
+        self.grid_layout.addWidget(QLabel("Gruppe:"), 11, 0, 1, 1)
+        self.gruppen_label = QLabel("")
+        self.grid_layout.addWidget(self.gruppen_label, 11,1, 1, 5)
+
+        self.grid_layout.addWidget(QLabel("Verzeichnis:"), 12, 0, 1, 1)
+        self.verzeichnis_label = QLabel("")
+        self.grid_layout.addWidget(self.verzeichnis_label, 12,1, 1, 5)
 
     titel = property(lambda self: self._get_string_value(self.titel_entry), lambda self, v: self._set_string_value(self.titel_entry, v))
     untertitel = property(lambda self: self._get_string_value(self.untertitel_entry), lambda self, v: self._set_string_value(self.untertitel_entry, v))
@@ -814,19 +776,21 @@ class ZeitschTab(GenericTab):
     komplett = property(lambda self: self._get_boolean_value(self.komplett_checkbox), lambda self, v: self._set_boolean_value(self.komplett_checkbox, v))
     unikat = property(lambda self: self._get_boolean_value(self.unikat_checkbox), lambda self, v: self._set_boolean_value(self.unikat_checkbox, v))
     schuelerzeitung = property(lambda self: self._get_boolean_value(self.schuelerzeitung_checkbox), lambda self, v: self._set_boolean_value(self.schuelerzeitung_checkbox, v))
-    digialisiert = property(lambda self: self._get_boolean_value(self.digitalisiert_checkbox), lambda self, v: self._set_boolean_value(self.digitalisiert_checkbox, v))
+    digitalisiert = property(lambda self: self._get_boolean_value(self.digitalisiert_checkbox), lambda self, v: self._set_boolean_value(self.digitalisiert_checkbox, v))
     systematikpunkte = property(None, lambda self, v: self._set_systematikpunkte(v))
     systematik_as_standort = property(lambda self: self._get_boolean_value(self.standort_checkbox), lambda self, v: self._set_boolean_value(self.standort_checkbox, v))
     jahrgaenge = property(_get_current_jahrgangs_id, lambda self, v: self._set_jahrgange(v))
+    selected_jahrgang = property(_get_current_jahrgang)
+    nummern = property(lambda self: self._get_string_value(self.jg_nummern_label), lambda self, v: self._set_string_value(self.jg_nummern_label, v))
+    gruppe = property(lambda self: self._get_string_value(self.gruppen_label), lambda self, v: self._set_string_value(self.gruppen_label, v))
+    verzeichnis = property(lambda self: self._get_string_value(self.verzeichnis_label), lambda self, v: self._set_string_value(self.verzeichnis_label, v))
 
     systematik1 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     systematik2 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     systematik3 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     
-    verzeichnis = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     vorlaeufertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     nachfolgertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    gruppe = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     lastchange = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     lastcheck = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     lastsubmit = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -840,8 +804,6 @@ class ZeitschTab(GenericTab):
     new_zdbid = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     zdb_info = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     
-    nummern = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-
     def _remove_systematik(self):
         
         pass

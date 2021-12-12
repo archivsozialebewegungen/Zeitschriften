@@ -561,6 +561,7 @@ class ZeitschriftenPresenter(GenericPresenter):
             self.save()
         
     def set_nummern(self):
+        # TODO: remove when gtk-Gui is gone
         
         jg_id = self.viewmodel.jahrgaenge
         if jg_id is None:
@@ -655,6 +656,14 @@ class ZeitschriftenPresenter(GenericPresenter):
     def _get_jahrgaenge(self):
         
         return self.jahrgaenge_dao.fetch_jahrgaenge_for_zeitschrift(self.viewmodel)
+    
+    def update_jg_display(self):
+        
+        current = self.viewmodel.selected_jahrgang
+        if current is None:
+            self.viewmodel.nummern = ""
+            return
+        self.viewmodel.nummern = current.nummern
     
     def add_current_issue(self):
         

@@ -5,12 +5,13 @@ Created on 11.11.2021
 '''
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QGridLayout, QLabel,\
     QRadioButton, QLineEdit, QVBoxLayout, QPushButton, QStatusBar, QCheckBox,\
-    QTableWidget, QTableWidgetItem, QAbstractItemView
+    QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit
 from PyQt5.QtCore import QSize, Qt
 from asb_zeitschriften.broschdaos import BooleanFilterProperty, Brosch
 from injector import singleton, inject
 from asb_zeitschriften.presenters import BroschSearchDialogPresenter
 from asb_systematik.SystematikTreeWidgetService import SystematikTreeWidgetService
+from asb_zeitschriften.qtmixins import ViewmodelMixin
 
 class QuestionDialog(QDialog):
     
@@ -382,3 +383,96 @@ class SystematikSelectDialog(QDialog):
         return item.systematik_node
 
     selected = property(_get_selected)
+
+@singleton    
+class JahrgangEditDialog(QDialog, ViewmodelMixin):
+
+    def __init__(self):
+
+        super().__init__()
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowTitle("Jahrgang bearbeiten")
+        self.resize(QSize(350, 400))
+
+        main_layout = QVBoxLayout(self)
+        main_layout.addLayout(self.get_content_layout())
+        main_layout.addWidget(self.get_button_box())
+        
+        self.setLayout(main_layout)
+        
+    def exec(self, jahrgang, *args, **kwargs):
+
+        self._jahrgang = jahrgang
+        self.update_widgets()
+        super().exec()
+        
+    def get_content_layout(self):
+        
+        content_layout = QGridLayout()
+
+        
+        
+        content_layout.addWidget(QLabel("Nummern:"), 0, 0, 1, 1)
+        self.nummern_textedit = QPlainTextEdit()
+        content_layout.addWidget(self.nummern_textedit, 0, 1, 2, 5)
+        
+        content_layout.addWidget(QLabel("Sondernummern:"), 1, 0, 1, 1)
+        self.sondernummern_textedit = QPlainTextEdit()
+        content_layout.addWidget(self.sondernummern_textedit, 1, 1, 2, 5)
+
+        content_layout.addWidget(QLabel("Beschädigt:"), 2, 0, 1, 1)
+        self.beschaedigt_textedit = QPlainTextEdit()
+        content_layout.addWidget(self.beschaedigt_textedit, 2, 1, 2, 5)
+
+        content_layout.addWidget(QLabel("Fehlend:"), 3, 0, 1, 1)
+        self.fehlend_textedit = QPlainTextEdit()
+        content_layout.addWidget(self.fehlend_textedit, 3, 1, 2, 5)
+
+        content_layout.addWidget(QLabel("Bemerkung:"), 4, 0, 1, 1)
+        self.bemerkung_textedit = QPlainTextEdit()
+        content_layout.addWidget(self.bemerkung_textedit, 4, 1, 2, 5)
+
+        return content_layout
+    
+    def update_widgets(self):
+        
+        self._set_string_value(self.nummern_textedit, self._jahrgang.nummern)
+        self._set_string_value(self.sondernummern_textedit, self._jahrgang.sondernummern)
+        self._set_string_value(self.beschaedigt_textedit, self._jahrgang.beschaedigt)
+        self._set_string_value(self.fehlend_textedit, self._jahrgang.fehlend)
+        self._set_string_value(self.bemerkung_textedit, self._jahrgang.bemerkung)
+
+    def _get_jahrgang(self):
+        
+        self._jahrgang.nummern = self._get_string_value(self.nummern_textedit)
+        self._jahrgang.nummern = self._get_string_value(self.sondernummern_textedit)
+        self._jahrgang.nummern = self._get_string_value(self.beschaedigt_textedit)
+        self._jahrgang.nummern = self._get_string_value(self.fehlend_textedit)
+        self._jahrgang.nummern = self._get_string_value(self.bemerkung_textedit)
+        
+        return self._jahrgang
+    
+    def get_button_box(self):
+        
+        button_box = QDialogButtonBox()
+        
+        apply_button = QPushButton("&Speichern")
+        button_box.addButton(apply_button, QDialogButtonBox.AcceptRole)
+
+        reset_button = QPushButton("&Zurücksetzen")
+        button_box.addButton(reset_button, QDialogButtonBox.ResetRole)
+        reset_button.clicked.connect(self._reset)
+
+        cancel_button = QPushButton("&Abbrechen")
+        button_box.addButton(cancel_button, QDialogButtonBox.RejectRole)
+
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        
+        return button_box
+
+    def _reset(self):
+        
+        self.update_widgets(self.jahrgang)
+
+    jahrgang = property(_get_jahrgang)
