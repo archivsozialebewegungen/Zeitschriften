@@ -7,9 +7,11 @@ from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QGridLayout, QLabel,\
     QRadioButton, QLineEdit, QVBoxLayout, QPushButton, QStatusBar, QCheckBox,\
     QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit
 from PyQt5.QtCore import QSize, Qt
-from asb_zeitschriften.broschdaos import BooleanFilterProperty, Brosch
+from asb_zeitschriften.broschdaos import BooleanFilterProperty, Brosch,\
+    JahrgaengeDao
 from injector import singleton, inject
-from asb_zeitschriften.presenters import BroschSearchDialogPresenter
+from asb_zeitschriften.presenters import BroschSearchDialogPresenter,\
+    JahrgangEditDialogPresenter
 from asb_systematik.SystematikTreeWidgetService import SystematikTreeWidgetService
 from asb_zeitschriften.qtmixins import ViewmodelMixin
 
@@ -387,8 +389,11 @@ class SystematikSelectDialog(QDialog):
 @singleton    
 class JahrgangEditDialog(QDialog, ViewmodelMixin):
 
-    def __init__(self):
+    @inject
+    def __init__(self, dao: JahrgaengeDao):
 
+        self.dao = dao
+        
         super().__init__()
         self.setWindowModality(Qt.ApplicationModal)
         self.setWindowTitle("Jahrgang bearbeiten")
@@ -409,46 +414,70 @@ class JahrgangEditDialog(QDialog, ViewmodelMixin):
     def get_content_layout(self):
         
         content_layout = QGridLayout()
+        
+        content_layout.addWidget(QLabel("Jahr:"), 0, 0, 1, 1)
+        self.jahr_entry = QLineEdit()
+        content_layout.addWidget(self.jahr_entry, 0, 1, 1, 2)
+        
+        content_layout.addWidget(QLabel("ViSdP:"), 0, 4, 1, 1)
+        self.visdp_entry = QLineEdit()
+        content_layout.addWidget(self.visdp_entry, 0, 5, 1, 2)
 
-        
-        
-        content_layout.addWidget(QLabel("Nummern:"), 0, 0, 1, 1)
+        content_layout.addWidget(QLabel("Nummern:"), 1, 0, 1, 1)
         self.nummern_textedit = QPlainTextEdit()
-        content_layout.addWidget(self.nummern_textedit, 0, 1, 2, 5)
+        content_layout.addWidget(self.nummern_textedit, 1, 1, 1, 5)
         
-        content_layout.addWidget(QLabel("Sondernummern:"), 1, 0, 1, 1)
+        content_layout.addWidget(QLabel("Sondernummern:"), 2, 0, 1, 1)
         self.sondernummern_textedit = QPlainTextEdit()
-        content_layout.addWidget(self.sondernummern_textedit, 1, 1, 2, 5)
+        content_layout.addWidget(self.sondernummern_textedit, 2, 1, 1, 5)
 
-        content_layout.addWidget(QLabel("Beschädigt:"), 2, 0, 1, 1)
+        content_layout.addWidget(QLabel("Beschädigt:"), 3, 0, 1, 1)
         self.beschaedigt_textedit = QPlainTextEdit()
-        content_layout.addWidget(self.beschaedigt_textedit, 2, 1, 2, 5)
+        content_layout.addWidget(self.beschaedigt_textedit, 3, 1, 1, 5)
 
-        content_layout.addWidget(QLabel("Fehlend:"), 3, 0, 1, 1)
+        content_layout.addWidget(QLabel("Fehlend:"), 4, 0, 1, 1)
         self.fehlend_textedit = QPlainTextEdit()
-        content_layout.addWidget(self.fehlend_textedit, 3, 1, 2, 5)
+        content_layout.addWidget(self.fehlend_textedit, 4, 1, 1, 5)
 
-        content_layout.addWidget(QLabel("Bemerkung:"), 4, 0, 1, 1)
+        content_layout.addWidget(QLabel("Bemerkung:"), 5, 0, 1, 1)
         self.bemerkung_textedit = QPlainTextEdit()
-        content_layout.addWidget(self.bemerkung_textedit, 4, 1, 2, 5)
+        content_layout.addWidget(self.bemerkung_textedit, 5, 1, 1, 5)
+
+        self.komplett_checkbox = QCheckBox("Komplett:")
+        content_layout.addWidget(self.komplett_checkbox, 6, 0, 1, 3)
+
+        self.register_checkbox = QCheckBox("Register:")
+        content_layout.addWidget(self.register_checkbox, 6, 3, 1, 3)
 
         return content_layout
     
     def update_widgets(self):
         
+        self._set_int_value(self.jahr_entry, self._jahrgang.jahr)
+        if self._jahrgang.jahr is not None:
+            self.jahr_entry.setEnabled(False)
+        else:
+            self.jahr_entry.setEnabled(True)
+        self._set_string_value(self.visdp_entry, self._jahrgang.visdp)
         self._set_string_value(self.nummern_textedit, self._jahrgang.nummern)
         self._set_string_value(self.sondernummern_textedit, self._jahrgang.sondernummern)
         self._set_string_value(self.beschaedigt_textedit, self._jahrgang.beschaedigt)
         self._set_string_value(self.fehlend_textedit, self._jahrgang.fehlend)
         self._set_string_value(self.bemerkung_textedit, self._jahrgang.bemerkung)
+        self._set_boolean_value(self.komplett_checkbox, self._jahrgang.komplett)
+        self._set_boolean_value(self.register_checkbox, self._jahrgang.register)
 
     def _get_jahrgang(self):
         
+        self._jahrgang.jahr = self._get_int_value(self.jahr_entry, "Jahr")
+        self._jahrgang.visdp = self._get_string_value(self.visdp_entry)
         self._jahrgang.nummern = self._get_string_value(self.nummern_textedit)
-        self._jahrgang.nummern = self._get_string_value(self.sondernummern_textedit)
-        self._jahrgang.nummern = self._get_string_value(self.beschaedigt_textedit)
-        self._jahrgang.nummern = self._get_string_value(self.fehlend_textedit)
-        self._jahrgang.nummern = self._get_string_value(self.bemerkung_textedit)
+        self._jahrgang.sondernummern = self._get_string_value(self.sondernummern_textedit)
+        self._jahrgang.beschaedigt = self._get_string_value(self.beschaedigt_textedit)
+        self._jahrgang.fehlend = self._get_string_value(self.fehlend_textedit)
+        self._jahrgang.bemerkung = self._get_string_value(self.bemerkung_textedit)
+        self._jahrgang.komplett = self._get_boolean_value(self.komplett_checkbox)
+        self._jahrgang.register = self._get_boolean_value(self.register_checkbox)
         
         return self._jahrgang
     
@@ -458,6 +487,7 @@ class JahrgangEditDialog(QDialog, ViewmodelMixin):
         
         apply_button = QPushButton("&Speichern")
         button_box.addButton(apply_button, QDialogButtonBox.AcceptRole)
+        apply_button.clicked.connect(self._save)
 
         reset_button = QPushButton("&Zurücksetzen")
         button_box.addButton(reset_button, QDialogButtonBox.ResetRole)
@@ -473,6 +503,12 @@ class JahrgangEditDialog(QDialog, ViewmodelMixin):
 
     def _reset(self):
         
-        self.update_widgets(self.jahrgang)
+        self.update_widgets()
+        
+    def _save(self):
+        
+        if self.jahrgang.jahr is not None:
+            # TODO: Message
+            self.dao.save(self.jahrgang)
 
     jahrgang = property(_get_jahrgang)

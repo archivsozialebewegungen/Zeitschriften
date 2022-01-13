@@ -303,6 +303,7 @@ class Jahrgang:
         self.beschaedigt = None
         self.fehlend = None
         self.sondernummern = None
+        self.bemerkung = None
         self.visdp = None
         self.titel = None
         self.zid = None

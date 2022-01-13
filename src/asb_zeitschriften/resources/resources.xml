@@ -12,5 +12,6 @@
     <file alias="filter.svg">filter-svgrepo-com.svg</file>
     <file alias="filter-red.svg">filter-red-svgrepo-com.svg</file>
     <file alias="quit.svg">exit-svgrepo-com.svg</file>
+    <file alias="checked.svg">check-circle-svgrepo-com.svg</file>
 </qresource>
 </RCC>

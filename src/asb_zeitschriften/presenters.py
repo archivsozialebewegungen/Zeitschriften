@@ -566,10 +566,14 @@ class ZeitschriftenPresenter(GenericPresenter):
         jg_id = self.viewmodel.jahrgaenge
         if jg_id is None:
             self.viewmodel.nummern = None
+            self.viewmodel.sondernummern = None
+            self.viewmodel.beschaedigt = None
             return
         
         jahrgang = self.jahrgaenge_dao.fetch_by_id(jg_id, Jahrgang())
         self.viewmodel.nummern = jahrgang.nummern
+        self.viewmodel.sondernummern = jahrgang.sondernummern
+        self.viewmodel.beschaedigt = jahrgang.beschaedigt
         
     def add_vorlaeufer(self):
         
@@ -730,7 +734,10 @@ class ZeitschriftenPresenter(GenericPresenter):
         if j is None:
             return
         jg = self.jahrgaenge_dao.fetch_by_id(j, Jahrgang())
-        self.viewmodel.question = "Willst Du den Jahrgang %d wirklich löschen?" % jg.jahr
+        if jg.jahr is None:
+            self.viewmodel.question = "Willst Du den unbekannten Jahrgang wirklich löschen?"
+        else:
+            self.viewmodel.question = "Willst Du den Jahrgang %d wirklich löschen?" % jg.jahr
         if self.viewmodel.question_result:
             self.jahrgaenge_dao.delete(j)
         self.update_derived_fields()

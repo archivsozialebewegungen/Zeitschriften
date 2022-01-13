@@ -583,14 +583,92 @@ class ZeitschTab(GenericTab):
         if current_jg is None:
             return None
         return current_jg.id
-    
-    def _get_new_jahrgang(self):
-        
-        return None
 
+    def _set_lastchange(self, lastchange):
+        
+        self._lastchange = lastchange
+        if lastchange is None:
+            self._set_string_value(self.lastchange_label, "???")
+        else:
+            self._set_string_value(self.lastchange_label, lastchange.strftime("%d. %B %Y"))
+            
+    def _set_lastcheck(self, lastcheck):
+        
+        self._lastcheck = lastcheck
+        if lastcheck is None:
+            self._set_string_value(self.lastcheck_label, "???")
+        else:
+            self._set_string_value(self.lastcheck_label, lastcheck.strftime("%d. %B %Y"))
+            
+    def _set_lastsubmit(self, lastsubmit):
+        
+        self._lastsubmit = lastsubmit
+        if lastsubmit is None:
+            self._set_string_value(self.lastsubmit_label, "???")
+        else:
+            self._set_string_value(self.lastsubmit_label, lastsubmit.strftime("%d. %B %Y"))
+    
+    def create_jahrgang(self):
+        
+        jg = Jahrgang()
+        jg.erster_jg = self.erster_jg
+        jg.zid = self.id
+        jg.titel = self.titel
+        
+        self.jahrgang_edit_dialog.exec(jg)
+        self.presenter.update_derived_fields()
+        
     def edit_jahrgang(self):
         
         self.jahrgang_edit_dialog.exec(self.selected_jahrgang)
+        self.presenter.update_derived_fields()
+        
+    def delete_jahrgang(self):
+
+        # TODO: Move logic to presenter, when gtk Interface is removed        
+        if self.question_dialog.exec("Willst Du den gewählten Jahrgang wirklich löschen?"):
+            self.presenter.jahrgaenge_dao.delete(self.selected_jahrgang.id)
+            self.presenter.update_derived_fields()
+            
+    def group_delete(self):
+        
+        pass
+    
+    def group_change(self):
+        
+        pass
+    
+    def directory_delete(self):
+        
+        pass
+    
+    def directory_change(self):
+        
+        pass
+    
+    def vorgaengertitel_add(self):
+        
+        pass
+
+    def vorgaengertitel_delete(self):
+        
+        pass
+
+    def vorgaengertitel_goto(self):
+        
+        pass
+
+    def nachfolgertitel_add(self):
+        
+        pass
+
+    def nachfolgertitel_delete(self):
+        
+        pass
+
+    def nachfolgertitel_goto(self):
+        
+        pass
 
     def setEnabled(self, status: bool):
         
@@ -708,10 +786,10 @@ class ZeitschTab(GenericTab):
         self.grid_layout.addWidget(QLabel("Systematik:"), 8, 0, 1, 1)
         self.systematik_values = []
         self.systematik_combobox = QComboBox()
-        self.grid_layout.addWidget(self.systematik_combobox, 8, 1, 1, 6)
+        self.grid_layout.addWidget(self.systematik_combobox, 8, 1, 1, 5)
         
         self.standort_checkbox = QCheckBox("Ist Standort")
-        self.grid_layout.addWidget(self.standort_checkbox, 8, 7, 1, 1)
+        self.grid_layout.addWidget(self.standort_checkbox, 8, 6, 1, 1)
         self.standort_checkbox.toggled.connect(lambda: self.presenter.toggle_systematik_standort())
         self.systematik_combobox.currentTextChanged.connect(lambda: self.presenter.show_current_systematik_standort_status())
         
@@ -736,23 +814,91 @@ class ZeitschTab(GenericTab):
 
         jg_delete_button = QPushButton("Löschen")
         self.grid_layout.addWidget(jg_delete_button, 9, 8, 1, 2)
-        jg_delete_button.clicked.connect(lambda: self.presenter.delete_jahrgang())
+        jg_delete_button.clicked.connect(self.delete_jahrgang)
 
         jg_new_button = QPushButton("Anlegen")
         self.grid_layout.addWidget(jg_new_button, 9, 10, 1, 2)
-        jg_new_button.clicked.connect(lambda: self.presenter.new_jahrgang())
+        jg_new_button.clicked.connect(self.create_jahrgang)
         
         self.grid_layout.addWidget(QLabel("Vorhanden:"), 10, 0, 1, 1)
         self.jg_nummern_label = QLabel("")
         self.grid_layout.addWidget(self.jg_nummern_label, 10,1, 1, 11)
+        
+        self.grid_layout.addWidget(QLabel("Sondernummern:"), 11, 0, 1, 1)
+        self.jg_sondernummern_label = QLabel("")
+        self.grid_layout.addWidget(self.jg_sondernummern_label, 11,1, 1, 11)
+        
+        self.grid_layout.addWidget(QLabel("Beschädigt:"), 12, 0, 1, 1)
+        self.jg_beschaedigt_label = QLabel("")
+        self.grid_layout.addWidget(self.jg_beschaedigt_label, 12,1, 1, 11)
 
-        self.grid_layout.addWidget(QLabel("Gruppe:"), 11, 0, 1, 1)
+        self.grid_layout.addWidget(QLabel("Gruppe:"), 13, 0, 1, 1)
         self.gruppen_label = QLabel("")
-        self.grid_layout.addWidget(self.gruppen_label, 11,1, 1, 5)
+        self.grid_layout.addWidget(self.gruppen_label, 13,1, 1, 5)
 
-        self.grid_layout.addWidget(QLabel("Verzeichnis:"), 12, 0, 1, 1)
+        group_change_button = QPushButton("Ändern")
+        self.grid_layout.addWidget(group_change_button, 13, 6, 1, 2)
+        jg_add_button.clicked.connect(self.group_change)
+
+        group_delete_button = QPushButton("Löschen")
+        self.grid_layout.addWidget(group_delete_button, 13, 8, 1, 2)
+        jg_add_button.clicked.connect(self.group_delete)
+
+        self.grid_layout.addWidget(QLabel("Verzeichnis:"), 14, 0, 1, 1)
         self.verzeichnis_label = QLabel("")
-        self.grid_layout.addWidget(self.verzeichnis_label, 12,1, 1, 5)
+        self.grid_layout.addWidget(self.verzeichnis_label, 14,1, 1, 5)
+
+        directory_change_button = QPushButton("Ändern")
+        self.grid_layout.addWidget(directory_change_button, 14, 6, 1, 2)
+        jg_add_button.clicked.connect(self.directory_change)
+
+        directory_delete_button = QPushButton("Löschen")
+        self.grid_layout.addWidget(directory_delete_button, 14, 8, 1, 2)
+        jg_add_button.clicked.connect(self.directory_delete)
+
+        self.grid_layout.addWidget(QLabel("Vorläufer:"), 15, 0, 1, 1)
+        self.vorlaeufertitel_label = QLabel("")
+        self.grid_layout.addWidget(self.vorlaeufertitel_label, 15, 1, 1, 5)
+
+        vorgaenger_add_button = QPushButton("Hinzufügen")
+        self.grid_layout.addWidget(vorgaenger_add_button, 15, 6, 1, 2)
+        jg_add_button.clicked.connect(self.vorgaengertitel_add)
+
+        vorgaenger_delete_button = QPushButton("Löschen")
+        self.grid_layout.addWidget(vorgaenger_delete_button, 15, 8, 1, 2)
+        jg_add_button.clicked.connect(self.vorgaengertitel_delete)
+
+        vorgaenger_goto_button = QPushButton("Gehe zu")
+        self.grid_layout.addWidget(vorgaenger_goto_button, 15, 10, 1, 2)
+        jg_add_button.clicked.connect(self.vorgaengertitel_goto)
+
+        self.grid_layout.addWidget(QLabel("Nachfolger:"), 16, 0, 1, 1)
+        self.nachfolgertitel_label = QLabel("")
+        self.grid_layout.addWidget(self.nachfolgertitel_label, 16, 1, 1, 5)
+
+        nachfolger_add_button = QPushButton("Hinzufügen")
+        self.grid_layout.addWidget(nachfolger_add_button, 16, 6, 1, 2)
+        jg_add_button.clicked.connect(self.nachfolgertitel_add)
+
+        nachfolger_delete_button = QPushButton("Löschen")
+        self.grid_layout.addWidget(nachfolger_delete_button, 16, 8, 1, 2)
+        jg_add_button.clicked.connect(self.nachfolgertitel_delete)
+
+        nachfolger_goto_button = QPushButton("Gehe zu")
+        self.grid_layout.addWidget(nachfolger_goto_button, 16, 10, 1, 2)
+        jg_add_button.clicked.connect(self.nachfolgertitel_goto)
+
+        self.grid_layout.addWidget(QLabel("Letzte Änderung:"), 17, 0, 1, 1)
+        self.lastchange_label = QLabel("")
+        self.grid_layout.addWidget(self.lastchange_label, 17, 1, 1, 3)
+
+        self.grid_layout.addWidget(QLabel("Letzte Prüfung:"), 17, 4, 1, 1)
+        self.lastcheck_label = QLabel("")
+        self.grid_layout.addWidget(self.lastcheck_label, 17, 5, 1, 3)
+
+        self.grid_layout.addWidget(QLabel("Letzte Übermittlung:"), 17, 8, 1, 1)
+        self.lastsubmit_label = QLabel("")
+        self.grid_layout.addWidget(self.lastsubmit_label, 17, 9, 1, 3)
 
     titel = property(lambda self: self._get_string_value(self.titel_entry), lambda self, v: self._set_string_value(self.titel_entry, v))
     untertitel = property(lambda self: self._get_string_value(self.untertitel_entry), lambda self, v: self._set_string_value(self.untertitel_entry, v))
@@ -782,6 +928,8 @@ class ZeitschTab(GenericTab):
     jahrgaenge = property(_get_current_jahrgangs_id, lambda self, v: self._set_jahrgange(v))
     selected_jahrgang = property(_get_current_jahrgang)
     nummern = property(lambda self: self._get_string_value(self.jg_nummern_label), lambda self, v: self._set_string_value(self.jg_nummern_label, v))
+    sondernummern = property(lambda self: self._get_string_value(self.jg_sondernummern_label), lambda self, v: self._set_string_value(self.jg_sondernummern_label, v))
+    beschaedigt = property(lambda self: self._get_string_value(self.jg_beschaedigt_label), lambda self, v: self._set_string_value(self.jg_beschaedigt_label, v))
     gruppe = property(lambda self: self._get_string_value(self.gruppen_label), lambda self, v: self._set_string_value(self.gruppen_label, v))
     verzeichnis = property(lambda self: self._get_string_value(self.verzeichnis_label), lambda self, v: self._set_string_value(self.verzeichnis_label, v))
 
@@ -789,15 +937,15 @@ class ZeitschTab(GenericTab):
     systematik2 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     systematik3 = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     
-    vorlaeufertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    nachfolgertitel = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    lastchange = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    lastcheck = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    lastsubmit = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
+    vorlaeufertitel = property(None, lambda self, v: self._set_string_value(self.vorlaeufertitel_label, v))
+    nachfolgertitel = property(None, lambda self, v: self._set_string_value(self.nachfolgertitel_label, v))
+    lastchange = property(lambda self: self._lastchange, _set_lastchange)
+    lastcheck = property(lambda self: self._lastcheck, _set_lastcheck)
+    lastsubmit = property(lambda self: self._lastsubmit, _set_lastsubmit)
     
     # Dialog-Properties
     edited_jahrgang = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    new_jahrgang = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
+    new_jahrgang = property(lambda self: self._get_new_jahrgang())
     new_group = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     new_directory = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     confirm_directory_deletion = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
@@ -858,9 +1006,10 @@ class Window(QMainWindow):
         record_menu.addAction(self.removefile_action)
         record_menu.addAction(self.quit_action)
         
-        self.zdb_menu = QMenu("&ZDB")
-        self.zdb_menu_action = menu_bar.addMenu(self.zdb_menu)
-        self.zdb_menu.setEnabled(False)
+        self.zeitschriften_menu = QMenu("&Zeitschriften")
+        self.zdb_menu_action = menu_bar.addMenu(self.zeitschriften_menu)
+        self.zeitschriften_menu.setEnabled(False)
+        self.zeitschriften_menu.addAction(self.zeitschrift_geprueft_action)
         
         edit_toolbar = self.addToolBar("Bearbeiten")
         edit_toolbar.addAction(self.previous_action)
@@ -907,17 +1056,17 @@ class Window(QMainWindow):
             
     def display_brosch_actions(self):
         
-        self.zdb_menu.setEnabled(False)
+        self.zeitschriften_menu.setEnabled(False)
         self.addfile_action.setEnabled(True)
     
     def display_gruppen_actions(self):
         
-        self.zdb_menu.setEnabled(False)
+        self.zeitschriften_menu.setEnabled(False)
         self.addfile_action.setEnabled(False)
     
     def display_zeitsch_actions(self):
         
-        self.zdb_menu.setEnabled(True)
+        self.zeitschriften_menu.setEnabled(True)
         self.addfile_action.setEnabled(True)
         
     def create_actions(self):
@@ -947,6 +1096,9 @@ class Window(QMainWindow):
         self.quit_action = QAction(QIcon(":quit.svg"), "&Beenden", self)
         self.quit_action.triggered.connect(lambda value: QApplication.quit())
         
+        self.zeitschrift_geprueft_action = QAction(QIcon(":checked.svg"), "&Als geprüft setzen", self)
+        self.zeitschrift_geprueft_action.triggered.connect(lambda value: self.current_tab.presenter.set_checked())
+
     def add_file(self):
         
         self.current_tab.presenter.change_file()

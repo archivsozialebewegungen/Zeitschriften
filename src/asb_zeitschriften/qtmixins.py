@@ -4,7 +4,8 @@ Created on 11.12.2021
 @author: michael
 '''
 from asb_systematik.SystematikDao import DataError
-from PyQt5.QtWidgets import QLineEdit, QCheckBox, QPlainTextEdit
+from PyQt5.QtWidgets import QLineEdit, QCheckBox, QPlainTextEdit, QLabel
+from datetime import date
 
 class ViewmodelMixin():
 
@@ -59,6 +60,13 @@ class ViewmodelMixin():
     def _get_boolean_value(self, widget: QCheckBox):
         
         return widget.isChecked()
+
+    def _set_date_value(self, widget: QLabel, value: date):
+        
+        if value is None:
+            widget.setText("???")
+        else:
+            widget.setText(value.strftime("%d. %B %Y"))
 
     def _not_implemented_set(self, value):
         
