@@ -718,11 +718,11 @@ class ZeitschriftenFilter(GenericFilter):
         
     def get_next_expression(self, zeitschrift):
         
-        return (ZEITSCH_TABLE.c.titel == zeitschrift.titel and ZEITSCH_TABLE.c.id > zeitschrift.id) or ZEITSCH_TABLE.c.titel > zeitschrift.titel
+        return  or_(and_(ZEITSCH_TABLE.c.titel == zeitschrift.titel, ZEITSCH_TABLE.c.id > zeitschrift.id), ZEITSCH_TABLE.c.titel > zeitschrift.titel)
     
     def get_previous_expression(self, zeitschrift):
         
-        return (ZEITSCH_TABLE.c.titel == zeitschrift.titel and ZEITSCH_TABLE.c.id < zeitschrift.id) or ZEITSCH_TABLE.c.titel < zeitschrift.titel
+        return or_(and_(ZEITSCH_TABLE.c.titel == zeitschrift.titel, ZEITSCH_TABLE.c.id < zeitschrift.id), ZEITSCH_TABLE.c.titel < zeitschrift.titel)
     
 class PageObject:
     
@@ -813,7 +813,8 @@ class GenericDao:
     def fetch_next(self, object):
     
         stmt = select([self.table])
-        where_condition = and_(self.filter.filter_expression, self.filter.get_next_expression(object))
+        next_expression = self.filter.get_next_expression(object)
+        where_condition = and_(self.filter.filter_expression, next_expression)
         stmt = stmt.where(where_condition)
         stmt = stmt.order_by(*self.filter.sort_order_asc)
         row = self.connection.execute(stmt).fetchone()

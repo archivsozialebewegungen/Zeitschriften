@@ -469,7 +469,7 @@ class ZDBService:
     
     def __init__(self):
         
-        self.base_url = "https://www.zeitschriftendatenbank.de/api/hydra"
+        self.base_url = "https://www.zeitschriftendatenbank.de/api/tit.jsonld"
         self.current_result = None
         self.page_size = 15
         self.current_page = None
@@ -520,16 +520,15 @@ class ZDBCatalog:
     
     def __init__(self):
 
-        self.hydra_url = "https://www.zeitschriftendatenbank.de/api/hydra"
+        self.hydra_url = "https://zeitschriftendatenbank.de/api/tit/%s.jsonld"
         self.zdb_url = "https://zdb-katalog.de/title.xhtml"
         self.base_url = "https://ld.zdb-services.de/resource"
         
     def _fetch_raw_title_information(self, zdbid):
         
-        payload = {'q': 'zdbid=%s' % zdbid}
-        result = requests.get(self.hydra_url, params=payload).json()
-        member = result['member'][0]
-        return(JsonRecord(member))
+        url = self.hydra_url % zdbid
+        result = requests.get(url).json()
+        return(JsonRecord(result))
     
     def fetch_data(self, zdb_id):
 
