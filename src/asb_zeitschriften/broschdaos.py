@@ -240,8 +240,33 @@ class Brosch:
             return "Bro %d.0.%d.%d" % (self.hauptsystematik, 
                                        self.format, 
                                        self.nummer)
+            
+    def _get_basic_information(self):
+        '''
+        Liefert Ort, Jahr, Seiten, Auflage und Stückzahl, soweit bekannt als String
+        '''
+    
+        ausgabe = "o.O."
+        if self.ort is not None:
+            ausgabe = self.ort
+        if self.jahr is None:
+            ausgabe += " o.J."
+        else:
+            ausgabe += " %d" % self.jahr
+            
+        if self.seitenzahl is not None:
+            ausgabe += ", %d S." % self.seitenzahl
+            
+        if self.auflage is not None:
+            ausgabe += ", %s. Aufl." % self.auflage
+            
+        if self.exemplare is not None:
+            ausgabe += " (%d Exemplare)" % self.exemplare
+            
+        return ausgabe
     
     signatur = property(_get_signatur)
+    basic_info = property(_get_basic_information)
         
 class Zeitschrift:
     
@@ -291,6 +316,20 @@ class Zeitschrift:
         self.lastchange = None
         self.lastsubmit = None
 
+    def _get_basic_information(self):
+        '''
+        Liefert Ort und ersten Jahrgang, soweit bekannt als String
+        '''
+    
+        ausgabe = "o.O."
+        if self.ort is not None:
+            ausgabe = self.ort
+        if self.erster_jg is not None and self.erster_jg > 1:
+            ausgabe += ", erster Jahrgang: %d" % self.erster_jg
+                        
+        return ausgabe
+    
+    basic_info = property(_get_basic_information)
 
 class Jahrgang:
     
