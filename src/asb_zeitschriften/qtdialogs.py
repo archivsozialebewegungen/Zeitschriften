@@ -8,10 +8,10 @@ from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QGridLayout, QLabel,\
     QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit
 from PyQt5.QtCore import QSize, Qt
 from asb_zeitschriften.broschdaos import BooleanFilterProperty, Brosch,\
-    JahrgaengeDao
+    JahrgaengeDao, Zeitschrift
 from injector import singleton, inject
 from asb_zeitschriften.presenters import BroschSearchDialogPresenter,\
-    JahrgangEditDialogPresenter
+    JahrgangEditDialogPresenter, ZeitschriftenSearchDialogPresenter
 from asb_systematik.SystematikTreeWidgetService import SystematikTreeWidgetService
 from asb_zeitschriften.qtmixins import ViewmodelMixin
 
@@ -257,10 +257,11 @@ class GenericSearchDialog(GenericFilterDialog):
         self.content_layout.addWidget(self.result_stat_label, self.current_row, 0, 1, 4)
         self.current_row += 1
         
-        self.result_table = QTableWidget(0, 2)
+        self.result_table = QTableWidget(0, len(self.columns))
         self.content_layout.addWidget(self.result_table, self.current_row, 0, 1, 4)
-        self.result_table.setHorizontalHeaderLabels(["Signatur", "Titel"])
-        self.result_table.setColumnWidth(0,120)
+        self.result_table.setHorizontalHeaderLabels(self.columns)
+        for idx in range(0, len(self.column_width)):
+            self.result_table.setColumnWidth(idx,self.column_width[idx])
         self.result_table.horizontalHeader().setStretchLastSection(True);
         self.result_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.result_table.itemDoubleClicked.connect(self._record_selected)
@@ -333,15 +334,10 @@ class GenericSearchDialog(GenericFilterDialog):
     
     def _set_records(self, records: [Brosch]):
 
-        self._records = records
-        self.result_table.setRowCount(len(records))
-        
-        for index in range(0, len(records)):
-            self.result_table.setItem(index, 0, QTableWidgetItem(records[index].signatur))
-            self.result_table.setItem(index, 1, QTableWidgetItem(records[index].titel))
+        raise("Please implement in child class")
     
     result_stat = property(None, _set_result_stat)
-    records = property(None, _set_records)
+    records = property(None, lambda self, records: self._set_records(records))
     
 @singleton
 class BroschSearchDialog(GenericSearchDialog):
@@ -349,7 +345,37 @@ class BroschSearchDialog(GenericSearchDialog):
     @inject
     def __init__(self, presenter: BroschSearchDialogPresenter):
         
+        self.columns = ["Signatur", "Titel"]
+        self.column_width = [120]
         super().__init__("Broschürensuche", presenter)
+
+    def _set_records(self, records: [Brosch]):
+
+        self._records = records
+        self.result_table.setRowCount(len(records))
+        
+        for index in range(0, len(records)):
+            self.result_table.setItem(index, 0, QTableWidgetItem(records[index].signatur))
+            self.result_table.setItem(index, 1, QTableWidgetItem(records[index].titel))
+
+@singleton
+class ZeitschriftenSearchDialog(GenericSearchDialog):
+    
+    @inject
+    def __init__(self, presenter: ZeitschriftenSearchDialogPresenter):
+        
+        self.columns = ["Titel", "Untertitel"]
+        self.column_width = [300]
+        super().__init__("Zeitschriftensuche", presenter)
+
+    def _set_records(self, records: [Zeitschrift]):
+
+        self._records = records
+        self.result_table.setRowCount(len(records))
+        
+        for index in range(0, len(records)):
+            self.result_table.setItem(index, 0, QTableWidgetItem(records[index].titel))
+            self.result_table.setItem(index, 1, QTableWidgetItem(records[index].untertitel))
 
 @singleton        
 class SystematikSelectDialog(QDialog):

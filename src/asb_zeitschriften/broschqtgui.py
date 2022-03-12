@@ -21,6 +21,7 @@ from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
 from asb_systematik.SystematikDao import AlexandriaDbModule
 from pickle import NONE
 from asb_zeitschriften.qtmixins import ViewmodelMixin
+from asb_zeitschriften.qtdialogs import ZeitschriftenSearchDialog
 
 @singleton
 class StatusManager():
@@ -551,9 +552,11 @@ class ZeitschTab(GenericTab):
                  question_dialog: QuestionDialog,
                  systematik_select_dialog: SystematikSelectDialog,
                  filter_dialog: ZeitschFilterDialog,
+                 search_dialog: ZeitschriftenSearchDialog,
                  jahrgang_edit_dialog: JahrgangEditDialog):
         
-        super().__init__(presenter, mode_change_manager, question_dialog, systematik_select_dialog, filter_dialog, None)
+        super().__init__(presenter, mode_change_manager, question_dialog,
+                         systematik_select_dialog, filter_dialog, search_dialog)
         self.jahrgang_edit_dialog = jahrgang_edit_dialog
 
     def _set_jahrgange(self, jahrgaenge: (Jahrgang,)):
