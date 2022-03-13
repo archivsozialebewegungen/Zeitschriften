@@ -750,11 +750,18 @@ class ZeitschriftenPresenter(GenericPresenter):
             self.viewmodel.digitalisiert = True
             self.save()
             self.update_derived_fields()
+            
+    def change_file(self):
+        
+        self.change_directory()
 
     def delete_directory(self):
         
         if self.viewmodel.verzeichnis is None:
             return
+        
+        
+        
         if not self.viewmodel.confirm_directory_deletion:
             return
         

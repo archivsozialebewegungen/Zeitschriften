@@ -38,8 +38,8 @@ class QuestionDialog(QDialog):
     def exec(self, question: str):
         
         self.question_label.setText(question)
-        return super().exec()
-
+        result = super().exec()
+        return result != 0
 class BroschSignatureDialog(QDialog):
     
     def __init__(self):
