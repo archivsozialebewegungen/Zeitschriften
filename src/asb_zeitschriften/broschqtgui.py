@@ -21,6 +21,7 @@ from asb_zeitschriften.guiconstants import VIEW_MODE, EDIT_MODE, A4, A5
 from asb_systematik.SystematikDao import AlexandriaDbModule
 from pickle import NONE
 from asb_zeitschriften.qtmixins import ViewmodelMixin
+from asb_zeitschriften.qtdialogs import ZeitschriftenSearchDialog
 
 @singleton
 class StatusManager():
@@ -551,9 +552,11 @@ class ZeitschTab(GenericTab):
                  question_dialog: QuestionDialog,
                  systematik_select_dialog: SystematikSelectDialog,
                  filter_dialog: ZeitschFilterDialog,
+                 search_dialog: ZeitschriftenSearchDialog,
                  jahrgang_edit_dialog: JahrgangEditDialog):
         
-        super().__init__(presenter, mode_change_manager, question_dialog, systematik_select_dialog, filter_dialog, None)
+        super().__init__(presenter, mode_change_manager, question_dialog,
+                         systematik_select_dialog, filter_dialog, search_dialog)
         self.jahrgang_edit_dialog = jahrgang_edit_dialog
 
     def _set_jahrgange(self, jahrgaenge: (Jahrgang,)):
@@ -583,6 +586,19 @@ class ZeitschTab(GenericTab):
         if current_jg is None:
             return None
         return current_jg.id
+    
+    def _get_new_directory(self):
+        
+        dialog = QFileDialog()
+        dialog.setFileMode(QFileDialog.DirectoryOnly)
+        
+        if dialog.exec_():
+            dir_names = dialog.selectedFiles()
+            for dir_name in dir_names:
+                return dir_name
+        
+        return None
+
 
     def _set_lastchange(self, lastchange):
         
@@ -607,6 +623,10 @@ class ZeitschTab(GenericTab):
             self._set_string_value(self.lastsubmit_label, "???")
         else:
             self._set_string_value(self.lastsubmit_label, lastsubmit.strftime("%d. %B %Y"))
+ 
+    def _confirm_remove_directory(self):
+        
+        return self.question_dialog.exec("Willst Du die Verknüpfung zum\nDigitalisatsverzeichnis wirklich\nlöschen?")
     
     def create_jahrgang(self):
         
@@ -640,11 +660,11 @@ class ZeitschTab(GenericTab):
     
     def directory_delete(self):
         
-        pass
+        self.presenter.delete_directory()
     
     def directory_change(self):
         
-        pass
+        self.presenter.change_directory()
     
     def vorgaengertitel_add(self):
         
@@ -848,13 +868,9 @@ class ZeitschTab(GenericTab):
         self.verzeichnis_label = QLabel("")
         self.grid_layout.addWidget(self.verzeichnis_label, 14,1, 1, 5)
 
-        directory_change_button = QPushButton("Ändern")
-        self.grid_layout.addWidget(directory_change_button, 14, 6, 1, 2)
-        jg_add_button.clicked.connect(self.directory_change)
-
         directory_delete_button = QPushButton("Löschen")
-        self.grid_layout.addWidget(directory_delete_button, 14, 8, 1, 2)
-        jg_add_button.clicked.connect(self.directory_delete)
+        self.grid_layout.addWidget(directory_delete_button, 14, 6, 1, 2)
+        directory_delete_button.clicked.connect(self.directory_delete)
 
         self.grid_layout.addWidget(QLabel("Vorläufer:"), 15, 0, 1, 1)
         self.vorlaeufertitel_label = QLabel("")
@@ -862,15 +878,15 @@ class ZeitschTab(GenericTab):
 
         vorgaenger_add_button = QPushButton("Hinzufügen")
         self.grid_layout.addWidget(vorgaenger_add_button, 15, 6, 1, 2)
-        jg_add_button.clicked.connect(self.vorgaengertitel_add)
+        vorgaenger_add_button.clicked.connect(self.vorgaengertitel_add)
 
         vorgaenger_delete_button = QPushButton("Löschen")
         self.grid_layout.addWidget(vorgaenger_delete_button, 15, 8, 1, 2)
-        jg_add_button.clicked.connect(self.vorgaengertitel_delete)
+        vorgaenger_delete_button.clicked.connect(self.vorgaengertitel_delete)
 
         vorgaenger_goto_button = QPushButton("Gehe zu")
         self.grid_layout.addWidget(vorgaenger_goto_button, 15, 10, 1, 2)
-        jg_add_button.clicked.connect(self.vorgaengertitel_goto)
+        vorgaenger_goto_button.clicked.connect(self.vorgaengertitel_goto)
 
         self.grid_layout.addWidget(QLabel("Nachfolger:"), 16, 0, 1, 1)
         self.nachfolgertitel_label = QLabel("")
@@ -878,15 +894,15 @@ class ZeitschTab(GenericTab):
 
         nachfolger_add_button = QPushButton("Hinzufügen")
         self.grid_layout.addWidget(nachfolger_add_button, 16, 6, 1, 2)
-        jg_add_button.clicked.connect(self.nachfolgertitel_add)
+        nachfolger_add_button.clicked.connect(self.nachfolgertitel_add)
 
         nachfolger_delete_button = QPushButton("Löschen")
         self.grid_layout.addWidget(nachfolger_delete_button, 16, 8, 1, 2)
-        jg_add_button.clicked.connect(self.nachfolgertitel_delete)
+        nachfolger_delete_button.clicked.connect(self.nachfolgertitel_delete)
 
         nachfolger_goto_button = QPushButton("Gehe zu")
         self.grid_layout.addWidget(nachfolger_goto_button, 16, 10, 1, 2)
-        jg_add_button.clicked.connect(self.nachfolgertitel_goto)
+        nachfolger_goto_button.clicked.connect(self.nachfolgertitel_goto)
 
         self.grid_layout.addWidget(QLabel("Letzte Änderung:"), 17, 0, 1, 1)
         self.lastchange_label = QLabel("")
@@ -947,8 +963,8 @@ class ZeitschTab(GenericTab):
     edited_jahrgang = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     new_jahrgang = property(lambda self: self._get_new_jahrgang())
     new_group = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    new_directory = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
-    confirm_directory_deletion = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
+    new_directory = property(lambda self: self._get_new_directory())
+    confirm_directory_deletion = property(lambda self: self._confirm_remove_directory())
     new_zdbid = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     zdb_info = property(lambda self: self._not_implemented_get(), lambda self, v: self._not_implemented_set(v))
     
