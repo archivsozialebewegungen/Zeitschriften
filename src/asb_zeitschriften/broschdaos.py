@@ -956,7 +956,7 @@ class BroschDao(GenericDao):
         
         stmt = select([BROSCH2SYST_TABLE]).where(BROSCH2SYST_TABLE.c.brosch_id == brosch.id)
         result = self.connection.execute(stmt)
-        syst_ids = []
+        syst_ids = ["%d" % brosch.hauptsystematik]
         for record in result.fetchall():
             syst_ids.append(record[BROSCH2SYST_TABLE.c.syst_id])
         return syst_ids
