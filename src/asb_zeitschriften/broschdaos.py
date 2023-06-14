@@ -20,7 +20,7 @@ from datetime import date
 from asb_zeitschriften.guiconstants import FILTER_PROPERTY_SYSTEMATIK,\
     FILTER_PROPERTY_JAHR_VOR, FILTER_PROPERTY_SIGNATUR, FILTER_PROPERTY_TITEL,\
     FILTER_PROPERTY_ORT, FILTER_PROPERTY_NAME, COMBINATION_AND,\
-    FILTER_PROPERTY_ZDB_MELDUNG
+    FILTER_PROPERTY_ZDB_MELDUNG, FILTER_PROPERTY_DIGITALISIERT
 from asb_systematik.SystematikDao import ALEXANDRIA_METADATA, DataError,\
     NoDataException, SystematikNode, SYSTEMATIK_TABLE
 
@@ -751,7 +751,8 @@ class ZeitschriftenFilter(GenericFilter):
                           TextFilterProperty([ZEITSCH_TABLE.c.ort], FILTER_PROPERTY_ORT),
                           TextFilterProperty([ZEITSCH_TABLE.c.herausgeber, ZEITSCH_TABLE.c.spender], FILTER_PROPERTY_NAME),
                           ZeitschSystematikFilterProperty(),
-                          BooleanFilterProperty(ZEITSCH_TABLE.c.unimeldung, FILTER_PROPERTY_ZDB_MELDUNG)])        
+                          BooleanFilterProperty(ZEITSCH_TABLE.c.unimeldung, FILTER_PROPERTY_ZDB_MELDUNG),
+                          BooleanFilterProperty(ZEITSCH_TABLE.c.digitalisiert, FILTER_PROPERTY_DIGITALISIERT)])        
         self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc(), ZEITSCH_TABLE.c.id.asc()]
         self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc(), ZEITSCH_TABLE.c.id.desc()]
         
