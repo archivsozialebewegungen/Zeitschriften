@@ -5,7 +5,6 @@ Created on 07.11.2021
 '''
 from injector import Injector, singleton, inject, Module, provider
 import sys
-import resources
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QTabWidget,\
     QGridLayout, QLineEdit, QLabel, QAction, QMenu, QCheckBox, QFileDialog,\
     QComboBox, QPushButton

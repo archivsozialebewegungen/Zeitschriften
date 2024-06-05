@@ -3,12 +3,15 @@ Created on 13.08.2020
 
 @author: michael
 '''
-import gi
+try:
+    import gi
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import Gtk
+except:
+    pass
 import os
 import sys
 from asb_systematik.SystematikDao import AlexandriaDbModule
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 from injector import Injector, inject
 from asb_zeitschriften.viewmodels import BroschPage, GroupPage, ZeitschriftenPage
 
