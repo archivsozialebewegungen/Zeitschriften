@@ -20,7 +20,7 @@ from datetime import date
 from asb_zeitschriften.guiconstants import FILTER_PROPERTY_SYSTEMATIK,\
     FILTER_PROPERTY_JAHR_VOR, FILTER_PROPERTY_SIGNATUR, FILTER_PROPERTY_TITEL,\
     FILTER_PROPERTY_ORT, FILTER_PROPERTY_NAME, COMBINATION_AND,\
-    FILTER_PROPERTY_ZDB_MELDUNG, FILTER_PROPERTY_DIGITALISIERT
+    FILTER_PROPERTY_ZDB_MELDUNG, FILTER_PROPERTY_DIGITALISIERT, FILTER_PROPERTY_JAHR_GLEICH
 from asb_systematik.SystematikDao import ALEXANDRIA_METADATA, DataError,\
     NoDataException, SystematikNode, SYSTEMATIK_TABLE
 
@@ -465,6 +465,23 @@ class YearLessProperty:
         return and_(BROSCH_TABLE.c.jahr < int_value,
                     BROSCH_TABLE.c.jahr != None)
         
+class YearEqualsProperty:
+    
+    def __init__(self):
+        
+        self.label = FILTER_PROPERTY_JAHR_GLEICH
+        
+    def build_subexpression(self, value):
+        
+        if value is None:
+            return None
+        try:
+            int_value = int(value)
+        except ValueError:
+            return None
+        
+        return and_(JAHRGANG_TABLE.c.jahr == int_value,
+                    JAHRGANG_TABLE.c.zid == ZEITSCH_TABLE.c.id)
     
 class SignaturProperty:
     
@@ -752,7 +769,8 @@ class ZeitschriftenFilter(GenericFilter):
                           TextFilterProperty([ZEITSCH_TABLE.c.herausgeber, ZEITSCH_TABLE.c.spender], FILTER_PROPERTY_NAME),
                           ZeitschSystematikFilterProperty(),
                           BooleanFilterProperty(ZEITSCH_TABLE.c.unimeldung, FILTER_PROPERTY_ZDB_MELDUNG),
-                          BooleanFilterProperty(ZEITSCH_TABLE.c.digitalisiert, FILTER_PROPERTY_DIGITALISIERT)])        
+                          BooleanFilterProperty(ZEITSCH_TABLE.c.digitalisiert, FILTER_PROPERTY_DIGITALISIERT),
+                          YearEqualsProperty()])        
         self.sort_order_asc = [ZEITSCH_TABLE.c.titel.asc(), ZEITSCH_TABLE.c.id.asc()]
         self.sort_order_desc = [ZEITSCH_TABLE.c.titel.desc(), ZEITSCH_TABLE.c.id.desc()]
         
