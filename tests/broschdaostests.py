@@ -5,7 +5,7 @@ Created on 11.08.2020
 '''
 import unittest
 from sqlalchemy.engine import create_engine
-from asb.brosch.broschdaos import BroschDao, Zeitschrift,\
+from asb_zeitschriften.broschdaos import BroschDao, Zeitschrift,\
     ZeitschriftenDao, ZEITSCH_TABLE, NoDataException,\
     GROUP_TABLE, Group,\
     GroupDao, UNTERGRUPPEN_TABLE, DataError, VORLAEUFER_TABLE, BROSCH_TABLE,\

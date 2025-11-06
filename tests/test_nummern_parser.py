@@ -4,9 +4,9 @@ Created on 30.01.2021
 @author: michael
 '''
 import unittest
-from asb.brosch.services import normalize_entry,\
+from asb_zeitschriften.services import normalize_entry_full as normalize_entry,\
     normalize_sequence, cleanup_number_entry, replace_ranges
-from asb.brosch.broschdaos import Jahrgang
+from asb_zeitschriften.broschdaos import Jahrgang
 
 class TestCleanup(unittest.TestCase):
     
